@@ -1,4 +1,4 @@
-# Actual Number Picker (How should it look like)
+# Android: How should the number picker actually look like
 
 A horizontal number picker for Android
 
