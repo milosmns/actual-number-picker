@@ -8,9 +8,17 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context=".DemoActivity">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/hello_world" />
+    <me.angrybyte.numberpicker.view.ActualNumberPicker
+        android:id="@+id/picker"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:background="#DEDEDE" />
+
+    <NumberPicker
+        android:id="@+id/picker_old"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:layout_below="@id/picker"
+        android:background="#3040DE" />
 
 </RelativeLayout>

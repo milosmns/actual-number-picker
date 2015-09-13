@@ -1,6 +1,6 @@
 <resources>
 
-    <declare-styleable name="NumberPickerView">
+    <declare-styleable name="ActualNumberPicker">
 
     </declare-styleable>
 
