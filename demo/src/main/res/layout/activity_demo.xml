@@ -1,4 +1,5 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -8,17 +9,21 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context=".DemoActivity">
 
-    <me.angrybyte.numberpicker.view.ActualNumberPicker
-        android:id="@+id/picker"
-        android:layout_width="150dp"
-        android:layout_height="150dp"
-        android:background="#DEDEDE" />
-
     <NumberPicker
         android:id="@+id/picker_old"
         android:layout_width="150dp"
         android:layout_height="150dp"
-        android:layout_below="@id/picker"
+        android:layout_centerHorizontal="true"
         android:background="#3040DE" />
+
+    <me.angrybyte.numberpicker.view.ActualNumberPicker
+        android:id="@+id/actual_picker"
+        android:layout_width="wrap_content"
+        android:layout_height="39dp"
+        android:layout_below="@id/picker_old"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="30dp"
+        android:background="#FF3040"
+        app:text_color="@android:color/white" />
 
 </RelativeLayout>

@@ -1,6 +1,6 @@
 <resources>
 
     <!--suppress CheckTagEmptyBody -->
-    <style name="AppTheme" parent="@android:style/Theme.Holo"></style>
+    <style name="AppTheme" parent="@android:style/Theme.Light"></style>
 
 </resources>

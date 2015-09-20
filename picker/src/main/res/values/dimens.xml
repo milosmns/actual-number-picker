@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <dimen name="min_height">32dp</dimen>
+    <dimen name="min_bar_width">0.8dp</dimen>
+
+</resources>

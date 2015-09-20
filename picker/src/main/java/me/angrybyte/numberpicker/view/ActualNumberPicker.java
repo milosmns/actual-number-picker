@@ -1,357 +1,160 @@
 
 package me.angrybyte.numberpicker.view;
 
+import android.annotation.TargetApi;
 import android.content.Context;
-import android.os.Handler;
-import android.text.InputFilter;
-import android.text.InputType;
-import android.text.Spanned;
-import android.text.method.NumberKeyListener;
+import android.content.res.TypedArray;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.os.Build;
+import android.text.TextPaint;
 import android.util.AttributeSet;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 
 import me.angrybyte.numberpicker.R;
 
-public class ActualNumberPicker extends LinearLayout implements View.OnClickListener, View.OnFocusChangeListener, View.OnLongClickListener {
+public class ActualNumberPicker extends View {
 
-    public interface OnChangedListener {
-        void onChanged(ActualNumberPicker picker, int oldVal, int newVal);
-    }
+    private static final String TAG = ActualNumberPicker.class.getSimpleName();
+    private static final int ARR_LEFT = 0xC1;
+    private static final int ARR_RIGHT = 0xC2;
+    private static final int FAST_ARR_LEFT = 0xF1;
+    private static final int FAST_ARR_RIGHT = 0xF2;
+    private static final int CONTROL_TEXT = 0x00;
 
-    public interface Formatter {
-        String toString(int value);
-    }
+    private Paint mBarsPaint;
+    private Paint mControlsPaint;
+    private Paint mFastControlsPaint;
+    private TextPaint mTextPaint;
 
-    private final Runnable mRunnable = new Runnable() {
-        public void run() {
-            if (mIncrement) {
-                changeCurrent(mCurrent + 1);
-                mHandler.postDelayed(this, mSpeed);
-            } else if (mDecrement) {
-                changeCurrent(mCurrent - 1);
-                mHandler.postDelayed(this, mSpeed);
-            }
-        }
-    };
+    private int mMinHeight;
+    private int mMinBarWidth;
+    private int mWidth;
+    private int mHeight;
 
-    private final Handler mHandler;
-    private final EditText mText;
-    private final InputFilter mNumberInputFilter;
+    private boolean mShowBars;
+    private boolean mShowControls;
+    private boolean mShowFastControls;
 
-    private String[] mDisplayedValues;
-    protected int mStart;
-    protected int mEnd;
-    protected int mCurrent;
-    protected int mPrevious;
-    private OnChangedListener mListener;
-    private Formatter mFormatter;
-    private long mSpeed = 300;
-
-    private boolean mIncrement;
-    private boolean mDecrement;
+    private int mSelectedControl; // one of the constants on top
 
     public ActualNumberPicker(Context context) {
-        this(context, null);
+        super(context);
+        init(context, null, 0, 0);
     }
 
     public ActualNumberPicker(Context context, AttributeSet attrs) {
-        this(context, attrs, 0);
+        super(context, attrs);
+        init(context, attrs, 0, 0);
     }
 
-    public ActualNumberPicker(Context context, AttributeSet attrs, int defStyle) {
-        super(context, attrs);
-        setOrientation(HORIZONTAL);
-        LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        inflater.inflate(R.layout.actual_number_picker, this, true);
-        mHandler = new Handler();
-        InputFilter inputFilter = new ActualInputFilter();
-        mNumberInputFilter = new NumberRangeKeyListener();
-        mIncrementButton = (SpinnerButton) findViewById(R.id.increment);
-        mIncrementButton.setOnClickListener(this);
-        mIncrementButton.setOnLongClickListener(this);
-        mIncrementButton.setPicker(this);
-        mDecrementButton = (SpinnerButton) findViewById(R.id.decrement);
-        mDecrementButton.setOnClickListener(this);
-        mDecrementButton.setOnLongClickListener(this);
-        mDecrementButton.setPicker(this);
+    public ActualNumberPicker(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        init(context, attrs, defStyleAttr, 0);
+    }
 
-        mText = (EditText) findViewById(R.id.timepicker_input);
-        mText.setOnFocusChangeListener(this);
-        mText.setFilters(new InputFilter[] {
-            inputFilter
-        });
-        mText.setRawInputType(InputType.TYPE_CLASS_NUMBER);
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    public ActualNumberPicker(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+        super(context, attrs, defStyleAttr, defStyleRes);
+        init(context, attrs, defStyleAttr, defStyleRes);
+    }
 
-        if (!isEnabled()) {
-            setEnabled(false);
+    private void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+        TypedArray attributes = context.obtainStyledAttributes(attrs, R.styleable.ActualNumberPicker, defStyleAttr, defStyleRes);
+
+        mShowBars = attributes.getBoolean(R.styleable.ActualNumberPicker_show_bars, true);
+        mShowControls = attributes.getBoolean(R.styleable.ActualNumberPicker_show_controls, true);
+        mShowFastControls = attributes.getBoolean(R.styleable.ActualNumberPicker_show_fast_controls, true);
+
+        int barsColor = attributes.getColor(R.styleable.ActualNumberPicker_bar_color, 0xFF404040);
+        mBarsPaint = new Paint();
+        mBarsPaint.setAntiAlias(true);
+        mBarsPaint.setStyle(Paint.Style.FILL);
+        mBarsPaint.setColor(barsColor);
+
+        int controlsColor = attributes.getColor(R.styleable.ActualNumberPicker_controls_color, 0xFF404040);
+        mControlsPaint = new Paint();
+        mControlsPaint.setAntiAlias(true);
+        mControlsPaint.setStyle(Paint.Style.FILL);
+        mControlsPaint.setColor(controlsColor);
+
+        int fastControlsColor = attributes.getColor(R.styleable.ActualNumberPicker_fast_controls_color, 0xFF404040);
+        mFastControlsPaint = new Paint();
+        mFastControlsPaint.setAntiAlias(true);
+        mFastControlsPaint.setStyle(Paint.Style.FILL);
+        mFastControlsPaint.setColor(fastControlsColor);
+
+        int textColor = attributes.getColor(R.styleable.ActualNumberPicker_text_color, 0xFF4040FF);
+        mTextPaint = new TextPaint();
+        mTextPaint.setAntiAlias(true);
+        mTextPaint.setTextAlign(Paint.Align.CENTER);
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
+            mTextPaint.setHinting(Paint.HINTING_ON);
+        }
+        mTextPaint.setStyle(Paint.Style.FILL);
+        mTextPaint.setColor(textColor);
+
+        // call this when you're done with the attributes
+        attributes.recycle();
+
+        mMinBarWidth = context.getResources().getDimensionPixelSize(R.dimen.min_bar_width);
+        mMinHeight = context.getResources().getDimensionPixelSize(R.dimen.min_height);
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+        int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+
+        int height;
+
+        if (heightMode == MeasureSpec.EXACTLY) {
+            // respect min_height value
+            height = Math.max(mMinHeight, heightSize);
+        } else if (heightMode == MeasureSpec.AT_MOST) {
+            // whichever is smaller
+            height = Math.min(mMinHeight, heightSize);
+        } else {
+            // doesn't matter
+            height = Math.max(mMinHeight, heightSize);
+        }
+
+        mHeight = height;
+        mWidth = mHeight * 5; // fast_controls x2, controls x2, text
+
+        // MUST CALL THIS
+        setMeasuredDimension(mWidth, mHeight);
+
+        updateTextSize();
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        mHeight = Math.max(mMinHeight, h);
+        mWidth = mHeight * 5; // fast_controls x2, controls x2, text
+        updateTextSize();
+    }
+
+    private void updateTextSize() {
+        float size = 14f; // 14px on LDPI
+        Rect bounds = new Rect(0, 0, 0, 0);
+        mTextPaint.setTextSize(size);
+        mTextPaint.getTextBounds("00", 0, 1, bounds);
+
+        // this loop exits when text size becomes too big
+        while (bounds.height() < mHeight - mHeight * 0.2f) {
+            size += 0.5f;
+            mTextPaint.setTextSize(size);
+            mTextPaint.getTextBounds("00", 0, 1, bounds);
         }
     }
 
     @Override
-    public void setEnabled(boolean enabled) {
-        super.setEnabled(enabled);
-        mIncrementButton.setEnabled(enabled);
-        mDecrementButton.setEnabled(enabled);
-        mText.setEnabled(enabled);
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        canvas.drawText("w=" + mWidth + ",h=" + mHeight, mWidth * 0.5f, mHeight * 0.7f, mTextPaint);
     }
 
-    public void setOnChangeListener(OnChangedListener listener) {
-        mListener = listener;
-    }
-
-    public void setFormatter(Formatter formatter) {
-        mFormatter = formatter;
-    }
-
-    /**
-     * Set the range of numbers allowed for the number picker. The current value will be automatically set to the start.
-     *
-     * @param start the start of the range (inclusive)
-     * @param end the end of the range (inclusive)
-     */
-    public void setRange(int start, int end) {
-        mStart = start;
-        mEnd = end;
-        mCurrent = start;
-        updateView();
-    }
-
-    /**
-     * Set the range of numbers allowed for the number picker. The current value will be automatically set to the start. Also provide a
-     * mapping for values used to display to the user.
-     *
-     * @param start the start of the range (inclusive)
-     * @param end the end of the range (inclusive)
-     * @param displayedValues the values displayed to the user.
-     */
-    public void setRange(int start, int end, String[] displayedValues) {
-        mDisplayedValues = displayedValues;
-        mStart = start;
-        mEnd = end;
-        mCurrent = start;
-        updateView();
-    }
-
-    public void setCurrent(int current) {
-        mCurrent = current;
-        updateView();
-    }
-
-    /**
-     * The speed (in milliseconds) at which the numbers will scroll when the the +/- buttons are longpressed. Default is 300ms.
-     */
-    public void setSpeed(long speed) {
-        mSpeed = speed;
-    }
-
-    public void onClick(View v) {
-        validateInput(mText);
-        if (!mText.hasFocus()) {
-            mText.requestFocus();
-        }
-
-        // now perform the increment/decrement
-        if (R.id.increment == v.getId()) {
-            changeCurrent(mCurrent + 1);
-        } else if (R.id.decrement == v.getId()) {
-            changeCurrent(mCurrent - 1);
-        }
-    }
-
-    private String formatNumber(int value) {
-        return (mFormatter != null) ? mFormatter.toString(value) : String.valueOf(value);
-    }
-
-    protected void changeCurrent(int current) {
-        // wrap around the values if we go past the start or end
-        if (current > mEnd) {
-            current = mStart;
-        } else if (current < mStart) {
-            current = mEnd;
-        }
-        mPrevious = mCurrent;
-        mCurrent = current;
-        notifyChange();
-        updateView();
-    }
-
-    protected void notifyChange() {
-        if (mListener != null) {
-            mListener.onChanged(this, mPrevious, mCurrent);
-        }
-    }
-
-    protected void updateView() {
-        // if we don't have displayed values then use the current number else find
-        // the correct value in the displayed values for the current number
-        if (mDisplayedValues == null) {
-            mText.setText(formatNumber(mCurrent));
-        } else {
-            mText.setText(mDisplayedValues[mCurrent - mStart]);
-        }
-        mText.setSelection(mText.getText().length());
-    }
-
-    private void validateCurrentView(CharSequence str) {
-        int val = getSelectedPos(str.toString());
-        if ((val >= mStart) && (val <= mEnd)) {
-            if (mCurrent != val) {
-                mPrevious = mCurrent;
-                mCurrent = val;
-                notifyChange();
-            }
-        }
-        updateView();
-    }
-
-    public void onFocusChange(View v, boolean hasFocus) {
-
-        /* When focus is lost check that the text field
-         * has valid values.
-         */
-        if (!hasFocus) {
-            validateInput(v);
-        }
-    }
-
-    private void validateInput(View v) {
-        String str = String.valueOf(((TextView) v).getText());
-        if ("".equals(str)) {
-            // restore to the old value as we don't allow empty values
-            updateView();
-        } else {
-            // check the new value and ensure it's in range
-            validateCurrentView(str);
-        }
-    }
-
-    /**
-     * We start the long click here but rely on the {@link SpinnerButton} to inform us when the long click has ended.
-     */
-    public boolean onLongClick(View v) {
-        // the text view may still have focus so clear it's focus which will
-        // trigger the on focus changed and any typed values to be pulled
-        mText.clearFocus();
-
-        if (R.id.increment == v.getId()) {
-            mIncrement = true;
-            mHandler.post(mRunnable);
-        } else if (R.id.decrement == v.getId()) {
-            mDecrement = true;
-            mHandler.post(mRunnable);
-        }
-        return true;
-    }
-
-    public void cancelIncrement() {
-        mIncrement = false;
-    }
-
-    public void cancelDecrement() {
-        mDecrement = false;
-    }
-
-    private static final char[] DIGIT_CHARACTERS = new char[] {
-            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
-    };
-
-    private SpinnerButton mIncrementButton;
-    private SpinnerButton mDecrementButton;
-
-    private class ActualInputFilter implements InputFilter {
-
-        public CharSequence filter(CharSequence source, int start, int end, Spanned dest, int dstart, int dend) {
-            if (mDisplayedValues == null) {
-                return mNumberInputFilter.filter(source, start, end, dest, dstart, dend);
-            }
-            CharSequence filtered = String.valueOf(source.subSequence(start, end));
-            String result = String.valueOf(dest.subSequence(0, dstart)) + filtered + dest.subSequence(dend, dest.length());
-            String str = String.valueOf(result).toLowerCase();
-            for (String val : mDisplayedValues) {
-                val = val.toLowerCase();
-                if (val.startsWith(str)) {
-                    return filtered;
-                }
-            }
-            return "";
-        }
-    }
-
-    private class NumberRangeKeyListener extends NumberKeyListener {
-
-        // XXX This doesn't allow for range limits when controlled by a
-        // soft input method!
-        public int getInputType() {
-            return InputType.TYPE_CLASS_NUMBER;
-        }
-
-        @Override
-        protected char[] getAcceptedChars() {
-            return DIGIT_CHARACTERS;
-        }
-
-        @Override
-        public CharSequence filter(CharSequence source, int start, int end, Spanned dest, int dstart, int dend) {
-
-            CharSequence filtered = super.filter(source, start, end, dest, dstart, dend);
-            if (filtered == null) {
-                filtered = source.subSequence(start, end);
-            }
-
-            String result = String.valueOf(dest.subSequence(0, dstart)) + filtered + dest.subSequence(dend, dest.length());
-
-            if ("".equals(result)) {
-                return result;
-            }
-            int val = getSelectedPos(result);
-
-            /* Ensure the user can't type in a value greater
-             * than the max allowed. We have to allow less than min
-             * as the user might want to delete some numbers
-             * and then type a new number.
-             */
-            if (val > mEnd) {
-                return "";
-            } else {
-                return filtered;
-            }
-        }
-    }
-
-    private int getSelectedPos(String str) {
-        if (mDisplayedValues == null) {
-            return Integer.parseInt(str);
-        } else {
-            for (int i = 0; i < mDisplayedValues.length; i++) {
-
-                /* Don't force the user to type in jan when ja will do */
-                str = str.toLowerCase();
-                if (mDisplayedValues[i].toLowerCase().startsWith(str)) {
-                    return mStart + i;
-                }
-            }
-
-            /* The user might have typed in a number into the month field i.e.
-             * 10 instead of OCT so support that too.
-             */
-            try {
-                return Integer.parseInt(str);
-            } catch (NumberFormatException e) {
-
-                /* Ignore as if it's not a number we don't care */
-            }
-        }
-        return mStart;
-    }
-
-    /**
-     * @return the current value.
-     */
-    public int getCurrent() {
-        return mCurrent;
-    }
 }

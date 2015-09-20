@@ -1,0 +1,15 @@
+<resources>
+
+    <declare-styleable name="ActualNumberPicker">
+
+        <attr name="show_bars" format="boolean|reference" />
+        <attr name="show_controls" format="boolean|reference" />
+        <attr name="show_fast_controls" format="boolean|reference" />
+        <attr name="bar_color" format="color|reference" />
+        <attr name="controls_color" format="color|reference" />
+        <attr name="fast_controls_color" format="color|reference" />
+        <attr name="text_color" format="color|reference" />
+
+    </declare-styleable>
+
+</resources>
