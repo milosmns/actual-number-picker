@@ -10,10 +10,14 @@ import android.graphics.Rect;
 import android.os.Build;
 import android.text.TextPaint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 
 import me.angrybyte.numberpicker.R;
 
+/**
+ * FIXME: Add docs
+ */
 public class ActualNumberPicker extends View {
 
     private static final String TAG = ActualNumberPicker.class.getSimpleName();
@@ -31,8 +35,8 @@ public class ActualNumberPicker extends View {
 
     private int mMinHeight;
     private int mMinBarWidth;
-    private int mWidth;
-    private int mHeight;
+    private int mWidth = 0;
+    private int mHeight = 0;
 
     private int mBarsCount;
     private boolean mShowBars;
@@ -62,6 +66,9 @@ public class ActualNumberPicker extends View {
         init(context, attrs, defStyleAttr, defStyleRes);
     }
 
+    /**
+     * FIXME: Add docs
+     */
     private void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         TypedArray attributes = context.obtainStyledAttributes(attrs, R.styleable.ActualNumberPicker, defStyleAttr, defStyleRes);
 
@@ -111,6 +118,8 @@ public class ActualNumberPicker extends View {
 
         int heightMode = MeasureSpec.getMode(heightMeasureSpec);
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+        int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+        int widthSize = MeasureSpec.getSize(widthMeasureSpec);
 
         int height;
 
@@ -118,15 +127,21 @@ public class ActualNumberPicker extends View {
             // respect min_height value
             height = Math.max(mMinHeight, heightSize);
         } else if (heightMode == MeasureSpec.AT_MOST) {
-            // whichever is smaller
-            height = Math.min(mMinHeight, heightSize);
+            // take whichever is smaller, height <-> parent height
+            if (mHeight == 0) {
+                // no calculations yet, use min_height
+                height = Math.min(mMinHeight, heightSize);
+            } else {
+                // secondary pass, already calculated height, so use that
+                height = Math.min(mHeight, heightSize);
+            }
         } else {
             // doesn't matter
             height = Math.max(mMinHeight, heightSize);
         }
 
         mHeight = height;
-        mWidth = mHeight * 5; // fast_controls x2, controls x2, text
+        mWidth = calculateWidth(widthSize, widthMode, mHeight); // fast_controls x2, controls x2, text
 
         // MUST CALL THIS
         setMeasuredDimension(mWidth, mHeight);
@@ -135,12 +150,45 @@ public class ActualNumberPicker extends View {
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        super.onSizeChanged(w, h, oldw, oldh);
-        mHeight = Math.max(mMinHeight, h);
-        mWidth = mHeight * 5; // fast_controls x2, controls x2, text
+        Log.d(TAG, "Size changing... " + w + "x" + h + "<-" + oldw + "x" + oldh);
+        mHeight = Math.max(h, mHeight);
+        mWidth = calculateWidth(w, MeasureSpec.EXACTLY, mHeight);
         updateTextSize();
+        super.onSizeChanged(mWidth, mHeight, oldw, oldh);
     }
 
+    /**
+     * FIXME: Add docs
+     */
+    private int calculateWidth(int requestedWidth, int requestedWidthMode, int height) {
+        if (mShowControls && mShowFastControls) {
+            return height * 5;
+        } else if (!mShowControls && !mShowFastControls) {
+            if (requestedWidthMode == MeasureSpec.EXACTLY) {
+                return requestedWidth;
+            } else if (requestedWidthMode == MeasureSpec.AT_MOST) {
+                return requestedWidth;
+            } else {
+                return height * 5;
+            }
+        } else {
+            // only one of control sets is visible
+            return height * 3;
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasWindowFocus) {
+        super.onWindowFocusChanged(hasWindowFocus);
+
+        if (hasWindowFocus) {
+            updateTextSize();
+        }
+    }
+
+    /**
+     * FIXME: Add docs
+     */
     private void updateTextSize() {
         float size = 14f; // 14px on LDPI
         Rect bounds = new Rect(0, 0, 0, 0);
@@ -149,8 +197,7 @@ public class ActualNumberPicker extends View {
 
         // this loop exits when text size becomes too big
         while (bounds.height() < mHeight - mHeight * 0.2f) {
-            size += 0.5f;
-            mTextPaint.setTextSize(size);
+            mTextPaint.setTextSize(size++);
             mTextPaint.getTextBounds("AA", 0, 1, bounds);
         }
     }
