@@ -19,7 +19,7 @@
     <me.angrybyte.numberpicker.view.ActualNumberPicker
         android:id="@+id/actual_picker"
         android:layout_width="wrap_content"
-        android:layout_height="39dp"
+        android:layout_height="50dp"
         android:layout_below="@id/picker_old"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="30dp"

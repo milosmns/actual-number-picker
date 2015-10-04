@@ -17,6 +17,7 @@ import me.angrybyte.numberpicker.R;
 public class ActualNumberPicker extends View {
 
     private static final String TAG = ActualNumberPicker.class.getSimpleName();
+    private static final int DEFAULT_BAR_COUNT = 10;
     private static final int ARR_LEFT = 0xC1;
     private static final int ARR_RIGHT = 0xC2;
     private static final int FAST_ARR_LEFT = 0xF1;
@@ -33,6 +34,7 @@ public class ActualNumberPicker extends View {
     private int mWidth;
     private int mHeight;
 
+    private int mBarsCount;
     private boolean mShowBars;
     private boolean mShowControls;
     private boolean mShowFastControls;
@@ -95,7 +97,8 @@ public class ActualNumberPicker extends View {
         mTextPaint.setStyle(Paint.Style.FILL);
         mTextPaint.setColor(textColor);
 
-        // call this when you're done with the attributes
+        mBarsCount = attributes.getInteger(R.styleable.ActualNumberPicker_bars_count, DEFAULT_BAR_COUNT);
+
         attributes.recycle();
 
         mMinBarWidth = context.getResources().getDimensionPixelSize(R.dimen.min_bar_width);
@@ -104,6 +107,8 @@ public class ActualNumberPicker extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+
         int heightMode = MeasureSpec.getMode(heightMeasureSpec);
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
 
@@ -125,7 +130,6 @@ public class ActualNumberPicker extends View {
 
         // MUST CALL THIS
         setMeasuredDimension(mWidth, mHeight);
-
         updateTextSize();
     }
 
@@ -147,14 +151,16 @@ public class ActualNumberPicker extends View {
         while (bounds.height() < mHeight - mHeight * 0.2f) {
             size += 0.5f;
             mTextPaint.setTextSize(size);
-            mTextPaint.getTextBounds("00", 0, 1, bounds);
+            mTextPaint.getTextBounds("AA", 0, 1, bounds);
         }
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        canvas.drawText("w=" + mWidth + ",h=" + mHeight, mWidth * 0.5f, mHeight * 0.7f, mTextPaint);
+        // MM temp
+        mTextPaint.setTextSize(mTextPaint.getTextSize() * 0.3f);
+        canvas.drawText("w=" + mWidth + ",h=" + mHeight, mWidth * 0.2f, mHeight * 0.7f, mTextPaint);
     }
 
 }

@@ -9,6 +9,7 @@
         <attr name="controls_color" format="color|reference" />
         <attr name="fast_controls_color" format="color|reference" />
         <attr name="text_color" format="color|reference" />
+        <attr name="bars_count" format="integer|reference" />
 
     </declare-styleable>
 
