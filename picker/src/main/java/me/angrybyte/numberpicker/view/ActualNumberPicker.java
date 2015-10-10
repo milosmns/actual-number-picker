@@ -6,13 +6,16 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Point;
 import android.graphics.Rect;
 import android.os.Build;
 import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 
+import me.angrybyte.numberpicker.BuildConfig;
 import me.angrybyte.numberpicker.R;
 
 /**
@@ -28,22 +31,31 @@ public class ActualNumberPicker extends View {
     private static final int FAST_ARR_RIGHT = 0xF2;
     private static final int CONTROL_TEXT = 0x00;
 
-    private Paint mBarsPaint;
-    private Paint mControlsPaint;
-    private Paint mFastControlsPaint;
+    private Rect mTextBounds = new Rect(0, 0, 0, 0);
+    private Point mTextDimens = new Point(0, 0);
     private TextPaint mTextPaint;
+    private float mTextSize = -1.0f;
+    private boolean mShowText = true;
+
+    private Paint mBarsPaint;
+    private int mBarsCount = DEFAULT_BAR_COUNT;
+    private int mMinBarWidth;
+    private boolean mShowBars = true;
+
+    private Paint mControlsPaint;
+    private boolean mShowControls = true;
+
+    private Paint mFastControlsPaint;
+    private boolean mShowFastControls = true;
 
     private int mMinHeight;
-    private int mMinBarWidth;
     private int mWidth = 0;
     private int mHeight = 0;
 
-    private int mBarsCount;
-    private boolean mShowBars;
-    private boolean mShowControls;
-    private boolean mShowFastControls;
-
-    private int mSelectedControl; // one of the constants on top
+    private int mMinValue = 0;
+    private int mMaxValue = 1000;
+    private int mValue = 50;
+    private int mSelectedControl; // one of the constants from the top
 
     public ActualNumberPicker(Context context) {
         super(context);
@@ -97,12 +109,31 @@ public class ActualNumberPicker extends View {
         int textColor = attributes.getColor(R.styleable.ActualNumberPicker_text_color, 0xFF4040FF);
         mTextPaint = new TextPaint();
         mTextPaint.setAntiAlias(true);
-        mTextPaint.setTextAlign(Paint.Align.CENTER);
+        mTextPaint.setTextAlign(Paint.Align.LEFT);
+        mTextPaint.setLinearText(true);
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
             mTextPaint.setHinting(Paint.HINTING_ON);
         }
         mTextPaint.setStyle(Paint.Style.FILL);
         mTextPaint.setColor(textColor);
+
+        mTextSize = attributes.getDimension(R.styleable.ActualNumberPicker_text_size, mTextSize);
+        if (mTextSize != -1.0f) {
+            mTextPaint.setTextSize(mTextSize);
+        }
+
+        mShowText = attributes.getBoolean(R.styleable.ActualNumberPicker_show_text, mShowText);
+
+        mMinValue = attributes.getInt(R.styleable.ActualNumberPicker_min_value, mMinValue);
+        mMaxValue = attributes.getInt(R.styleable.ActualNumberPicker_max_value, mMaxValue);
+        if (mMaxValue <= mMinValue) {
+            throw new RuntimeException("Cannot use max_value " + mMaxValue + " because the min_value is " + mMinValue);
+        }
+
+        mValue = attributes.getInt(R.styleable.ActualNumberPicker_value, (mMaxValue + mMinValue) / 2);
+        if (mValue < mMinValue || mValue > mMaxValue) {
+            throw new RuntimeException("Cannot use value " + mValue + " because it is out of range");
+        }
 
         mBarsCount = attributes.getInteger(R.styleable.ActualNumberPicker_bars_count, DEFAULT_BAR_COUNT);
 
@@ -150,7 +181,7 @@ public class ActualNumberPicker extends View {
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        Log.d(TAG, "Size changing... " + w + "x" + h + "<-" + oldw + "x" + oldh);
+        Log.d(TAG, "Size changing... " + oldw + "x" + oldh + " -> " + w + "x" + h);
         mHeight = Math.max(h, mHeight);
         mWidth = calculateWidth(w, MeasureSpec.EXACTLY, mHeight);
         updateTextSize();
@@ -190,24 +221,88 @@ public class ActualNumberPicker extends View {
      * FIXME: Add docs
      */
     private void updateTextSize() {
-        float size = 14f; // 14px on LDPI
+        if (mTextSize != -1.0f) {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "Not calculating text size, a predefined value is set: " + mTextPaint.getTextSize());
+            }
+            return;
+        }
+
+        float size = 14f; // 14px on LDPI x system font factor
         Rect bounds = new Rect(0, 0, 0, 0);
         mTextPaint.setTextSize(size);
         mTextPaint.getTextBounds("00", 0, 1, bounds);
 
         // this loop exits when text size becomes too big
-        while (bounds.height() < mHeight - mHeight * 0.2f) {
+        while (bounds.height() < mHeight - mHeight * 0.4f) {
             mTextPaint.setTextSize(size++);
             mTextPaint.getTextBounds("AA", 0, 1, bounds);
         }
     }
 
+    /**
+     * Updates the indicator text size. Set to {@code -1.0f} to use maximum sized text.
+     *
+     * @param size A dimension representing the text size
+     */
+    public void setTextSize(float size) {
+        mTextSize = size;
+        if (mTextSize != -1.0f) {
+            mTextPaint.setTextSize(size);
+        }
+        updateTextSize();
+    }
+
+    /**
+     * Measures the given text and saves dimensions to the {@link #mTextDimens} field.
+     *
+     * @param text Which text to measure
+     */
+    private void measureText(String text) {
+        // accurate for height
+        mTextPaint.getTextBounds(text, 0, text.length(), mTextBounds);
+        mTextDimens.y = Math.abs(mTextBounds.height());
+
+        // accurate for width
+        mTextDimens.x = (int) Math.floor(mTextPaint.measureText(text));
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        Log.d(TAG, "Touching!" + event);
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN: {
+                return true;
+            }
+            case MotionEvent.ACTION_MOVE: {
+                float percent = event.getX() / (float) mWidth;
+                mValue = (int) Math.floor(percent * mMaxValue + mMinValue);
+                if (mValue < mMinValue) {
+                    mValue = mMinValue;
+                } else if (mValue > mMaxValue) {
+                    mValue = mMaxValue;
+                }
+                invalidate();
+                break;
+            }
+            case MotionEvent.ACTION_UP: {
+                return true;
+            }
+        }
+
+        return super.onTouchEvent(event);
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        // MM temp
-        mTextPaint.setTextSize(mTextPaint.getTextSize() * 0.3f);
-        canvas.drawText("w=" + mWidth + ",h=" + mHeight, mWidth * 0.2f, mHeight * 0.7f, mTextPaint);
+        if (mShowText) {
+            String value = String.valueOf((int) Math.floor(mValue));
+            measureText(value); // this will save dimensions to mTextDimens
+            int x = mWidth / 2 - mTextDimens.x / 2;
+            int y = mHeight / 2 + mTextDimens.y / 2;
+            canvas.drawText(value, x, y, mTextPaint);
+        }
     }
 
 }

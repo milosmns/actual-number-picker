@@ -3,5 +3,6 @@
 
     <dimen name="min_height">32dp</dimen>
     <dimen name="min_bar_width">0.8dp</dimen>
+    <dimen name="default_font_size">14sp</dimen>
 
 </resources>
