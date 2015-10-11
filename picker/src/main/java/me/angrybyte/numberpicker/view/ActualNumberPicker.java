@@ -19,7 +19,8 @@ import me.angrybyte.numberpicker.BuildConfig;
 import me.angrybyte.numberpicker.R;
 
 /**
- * FIXME: Add docs
+ * A horizontal number picker widget. Every aspect of the view is configurable, for more information see the view's attribute set
+ * (everything is self-explanatory).
  */
 public class ActualNumberPicker extends View {
 
@@ -79,7 +80,14 @@ public class ActualNumberPicker extends View {
     }
 
     /**
-     * FIXME: Add docs
+     * Initializes the view from any constructor, utilizing the theme engine, and using the assigned attributes.
+     * 
+     * @param context The Context the view is running in, through which it can access the current theme, resources, etc.
+     * @param attrs The attributes of the XML tag that is inflating the view
+     * @param defStyleAttr An attribute in the current theme that contains a reference to a style resource that supplies default values for
+     *            the view. Can be 0 to not look for defaults
+     * @param defStyleRes A resource identifier of a style resource that supplies default values for the view, used only if defStyleAttr is
+     *            0 or can not be found in the theme. Can be 0 to not look for defaults
      */
     private void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         TypedArray attributes = context.obtainStyledAttributes(attrs, R.styleable.ActualNumberPicker, defStyleAttr, defStyleRes);
@@ -189,7 +197,19 @@ public class ActualNumberPicker extends View {
     }
 
     /**
-     * FIXME: Add docs
+     * Does necessary calculations to ensure there is enough space for all components (value, right/left controls, and fast controls).<br>
+     * Width required is:
+     * <ol>
+     * <li><b>When all controls are shown</b> - Minimum 5x bigger than the height</li>
+     * <li><b>When only one set of controls is shown</b> (right/left OR fast controls) - Minimum 3x bigger than the height</li>
+     * <li><b>When no controls are shown</b> - Either a fixed width, a parent-matching width or minimum 5x bigger than the height</li>
+     * </ol>
+     *
+     * @param requestedWidth A value that was requested for width (by {@link #onSizeChanged(int, int, int, int)} or by
+     *            {@link #onMeasure(int, int)}), in pixels
+     * @param requestedWidthMode An integer constant from {@link android.view.View.MeasureSpec} that declares measuring mode
+     * @param height Pre-defined height of the view, in pixels
+     * @return Calculated width of the view, in pixels
      */
     private int calculateWidth(int requestedWidth, int requestedWidthMode, int height) {
         if (mShowControls && mShowFastControls) {
@@ -211,14 +231,14 @@ public class ActualNumberPicker extends View {
     @Override
     public void onWindowFocusChanged(boolean hasWindowFocus) {
         super.onWindowFocusChanged(hasWindowFocus);
-
         if (hasWindowFocus) {
             updateTextSize();
         }
     }
 
     /**
-     * FIXME: Add docs
+     * This sets the optimal text size for the value number. If there is a predefined {@link #mTextSize}, then that value is used. If there
+     * is no defined value for text size, this method calculated the optimal size, which is around 60% of the View's height.
      */
     private void updateTextSize() {
         if (mTextSize != -1.0f) {
@@ -296,12 +316,19 @@ public class ActualNumberPicker extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
         if (mShowText) {
             String value = String.valueOf((int) Math.floor(mValue));
             measureText(value); // this will save dimensions to mTextDimens
             int x = mWidth / 2 - mTextDimens.x / 2;
             int y = mHeight / 2 + mTextDimens.y / 2;
             canvas.drawText(value, x, y, mTextPaint);
+        }
+
+        if (mShowBars) {
+            for (int i = 0; i < mBarsCount; i++) {
+                // TODO draw bars, need to thing about this for a while
+            }
         }
     }
 

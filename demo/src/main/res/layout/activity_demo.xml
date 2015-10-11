@@ -24,8 +24,8 @@
         android:layout_centerHorizontal="true"
         android:layout_marginTop="30dp"
         android:background="#FF3040"
-        app:min_value="000"
         app:max_value="100"
+        app:min_value="0"
         app:text_color="@android:color/white"
         app:text_size="16sp" />
 
