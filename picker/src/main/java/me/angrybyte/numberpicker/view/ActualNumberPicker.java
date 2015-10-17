@@ -442,8 +442,8 @@ public class ActualNumberPicker extends View {
                 y = mHeight / 2 - barH / 2;
                 mBarBounds.set(x, y, x + mBarWidth, y + barH);
                 // don't draw if it overlaps the text, fake that text is wider
-                textL = mTextBounds.left - (int) Math.floor(mTextBounds.width() * 0.5f);
-                textR = mTextBounds.right + (int) Math.floor(mTextBounds.width() * 0.55f);
+                textL = mTextBounds.left - (int) Math.floor(mTextBounds.width() * 0.6f);
+                textR = mTextBounds.right + (int) Math.floor(mTextBounds.width() * 0.6f);
                 textT = mTextBounds.top;
                 textB = mTextBounds.bottom;
                 if (!mBarBounds.intersects(textL, textT, textR, textB)) {
