@@ -149,7 +149,7 @@ public class ActualNumberPicker extends View {
         mBarCount = attributes.getInteger(R.styleable.ActualNumberPicker_bars_count, DEFAULT_BAR_COUNT);
         if (mBarCount < 3) {
             mBarCount = DEFAULT_BAR_COUNT;
-        } else if (mBarCount % 2 == 0) {
+        } else if (mBarCount % 2 != 0) {
             mBarCount++;
         }
         mMinBarWidth = context.getResources().getDimensionPixelSize(R.dimen.min_bar_width);
@@ -386,12 +386,34 @@ public class ActualNumberPicker extends View {
         // Penner's easing function
         float height;
         if (index < barCount / 2) {
-            height = linear(index, minHeight, maxHeight - minHeight, barCount / 2);
+            height = linear(index, minHeight, maxHeight - minHeight, barCount / 2f);
         } else {
-            height = linear(index - barCount / 2, maxHeight, minHeight - maxHeight, barCount / 2);
+            height = linear(index - barCount / 2f, maxHeight, minHeight - maxHeight, barCount / 2f);
         }
 
         return (int) Math.floor(height);
+    }
+
+    /**
+     * Calculates where the given bar should be, more dense bars appear near the edges of the view.
+     *
+     * @param barCount How many bars are there
+     * @param index Which bar is being measured
+     * @param width How wide is the whole container
+     * @param barWidth How wide is a single bar
+     * @return X coordinate of the given bar (determined by the index parameter)
+     */
+    private int calculateBarX(int width, int barCount, int index, int barWidth) {
+        // (mWidth / (mBarCount + 1)) * (i + 1) - mBarWidth / 2;
+        float margin = mWidth / mBarCount;
+        float x;
+        if (index < barCount / 2) {
+            x = easeIn(index, margin, width / 2f, barCount / 2f);
+        } else {
+            x = easeOut(index - barCount / 2f, width / 2f, width - margin - width / 2f, barCount / 2f);
+        }
+
+        return (int) Math.floor(x - barWidth / 2f);
     }
 
     @Override
@@ -416,12 +438,12 @@ public class ActualNumberPicker extends View {
                 // smaller ones should be nearer to the sides
                 maxBarH = (int) Math.floor(0.4f * mHeight);
                 barH = calculateBarHeight(maxBarH, mBarCount, i);
-                x = (mWidth / (mBarCount + 1)) * (i + 1) - mBarWidth / 2;
+                x = calculateBarX(mWidth, mBarCount, i, mBarWidth);
                 y = mHeight / 2 - barH / 2;
                 mBarBounds.set(x, y, x + mBarWidth, y + barH);
                 // don't draw if it overlaps the text, fake that text is wider
                 textL = mTextBounds.left - (int) Math.floor(mTextBounds.width() * 0.5f);
-                textR = mTextBounds.right + (int) Math.floor(mTextBounds.width() * 0.5f);
+                textR = mTextBounds.right + (int) Math.floor(mTextBounds.width() * 0.55f);
                 textT = mTextBounds.top;
                 textB = mTextBounds.bottom;
                 if (!mBarBounds.intersects(textL, textT, textR, textB)) {
