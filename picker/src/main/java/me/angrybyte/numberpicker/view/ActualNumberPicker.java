@@ -26,7 +26,7 @@ import me.angrybyte.numberpicker.R;
 public class ActualNumberPicker extends View {
 
     private static final String TAG = ActualNumberPicker.class.getSimpleName();
-    private static final int DEFAULT_BAR_COUNT = 10;
+    private static final int DEFAULT_BAR_COUNT = 11;
     private static final int ARR_LEFT = 0xC1;
     private static final int ARR_RIGHT = 0xC2;
     private static final int FAST_ARR_LEFT = 0xF1;
@@ -147,6 +147,11 @@ public class ActualNumberPicker extends View {
         }
 
         mBarCount = attributes.getInteger(R.styleable.ActualNumberPicker_bars_count, DEFAULT_BAR_COUNT);
+        if (mBarCount < 3) {
+            mBarCount = DEFAULT_BAR_COUNT;
+        } else if (mBarCount % 2 == 0) {
+            mBarCount++;
+        }
         mMinBarWidth = context.getResources().getDimensionPixelSize(R.dimen.min_bar_width);
         mBarWidth = attributes.getDimensionPixelSize(R.styleable.ActualNumberPicker_bar_width, mMinBarWidth);
         if (mBarWidth < mMinBarWidth) {
@@ -322,7 +327,22 @@ public class ActualNumberPicker extends View {
     }
 
     /**
-     * Robert Penner's circular easing function, plotted by time and distance for a motion tween. Can be used for density, width and other
+     * Penner's linear easing function, plotted by time and distance for a motion tween. Can be used for density, width and other properties
+     * that should behave the same.
+     *
+     * @param b The beginning value of the property
+     * @param t The current time (or position) of the tween. This can be seconds or frames, steps, ms, whatever – as long as the unit is the
+     *            same as is used for the total time
+     * @param d The total time of the tween
+     * @param c The change between the beginning and destination value of the property
+     * @return The new value that has resulted from the equation
+     */
+    public float linear(float t, float b, float c, float d) {
+        return c * (t / d) + b;
+    }
+
+    /**
+     * Penner's sine easing in function, plotted by time and distance for a motion tween. Can be used for density, width and other
      * properties that should behave the same.
      *
      * @param b The beginning value of the property
@@ -332,12 +352,23 @@ public class ActualNumberPicker extends View {
      * @param c The change between the beginning and destination value of the property
      * @return The new value that has resulted from the equation
      */
-    private float easeInOutCirc(float b, float t, float d, float c) {
-        if ((t /= d / 2) < 1) {
-            return -c / 2 * ((float) Math.sqrt(1 - t * t) - 1) + b;
-        } else {
-            return c / 2 * ((float) Math.sqrt(1 - (t -= 2) * t) + 1) + b;
-        }
+    public float easeIn(float t, float b, float c, float d) {
+        return -c * (float) Math.cos(t / d * (Math.PI / 2)) + c + b;
+    }
+
+    /**
+     * Penner's sine easing out function, plotted by time and distance for a motion tween. Can be used for density, width and other
+     * properties that should behave the same.
+     *
+     * @param b The beginning value of the property
+     * @param t The current time (or position) of the tween. This can be seconds or frames, steps, ms, whatever – as long as the unit is the
+     *            same as is used for the total time
+     * @param d The total time of the tween
+     * @param c The change between the beginning and destination value of the property
+     * @return The new value that has resulted from the equation
+     */
+    public float easeOut(float t, float b, float c, float d) {
+        return c * (float) Math.sin(t / d * (Math.PI / 2)) + b;
     }
 
     /**
@@ -345,21 +376,22 @@ public class ActualNumberPicker extends View {
      * the total bar count.
      *
      * @param maxHeight Maximum allowed height of a bar
-     * @param totalWidth How wide is the whole view
      * @param barCount How many bars are there
-     * @param barWidth How wide is the bar
      * @param index Which bar is being measured
      * @return Scaled height of the bar
      */
-    private int calculateBarHeight(int maxHeight, int totalWidth, int barCount, int barWidth, int index) {
-        // Penner's easing function
-        // TODO LOGGING ONLY FOR NOW, NEED TO REEVALUATE
-        float x = easeInOutCirc(0, index / barCount, totalWidth, totalWidth - index / barCount * totalWidth);
-        // int x = (mWidth / mBarCount) * (i + 1) - mBarWidth / 2;
-        Log.d(TAG, String.format("index = %s, barCount = %s, totalWidth = %s, x = %s", index, barCount, totalWidth, x));
+    private int calculateBarHeight(int maxHeight, int barCount, int index) {
+        float minHeight = maxHeight * 0.9f;
 
-        // calculated height will always be much smaller than max height, so go with between values
-        return 2;
+        // Penner's easing function
+        float height;
+        if (index < barCount / 2) {
+            height = linear(index, minHeight, maxHeight - minHeight, barCount / 2);
+        } else {
+            height = linear(index - barCount / 2, maxHeight, minHeight - maxHeight, barCount / 2);
+        }
+
+        return (int) Math.floor(height);
     }
 
     @Override
@@ -378,17 +410,18 @@ public class ActualNumberPicker extends View {
         }
 
         if (mShowBars) {
-            int x, y, barH;
+            int x, y, maxBarH, barH;
             int textL, textR, textT, textB;
-            for (int i = 0; i < mBarCount - 1; i++) {
-                x = (mWidth / mBarCount) * (i + 1) - mBarWidth / 2;
-                y = (int) Math.floor(0.3f * mHeight);
-                // smaller ones should be near to the sides
-                barH = calculateBarHeight((int) Math.floor(0.7f * mHeight), mWidth, mBarCount, mBarWidth, i + 1);
-                mBarBounds.set(x, y, x + mBarWidth, barH);
+            for (int i = 0; i < mBarCount; i++) {
+                // smaller ones should be nearer to the sides
+                maxBarH = (int) Math.floor(0.4f * mHeight);
+                barH = calculateBarHeight(maxBarH, mBarCount, i);
+                x = (mWidth / (mBarCount + 1)) * (i + 1) - mBarWidth / 2;
+                y = mHeight / 2 - barH / 2;
+                mBarBounds.set(x, y, x + mBarWidth, y + barH);
                 // don't draw if it overlaps the text, fake that text is wider
-                textL = mTextBounds.left - (int) Math.floor(mTextBounds.width() * 0.4f);
-                textR = mTextBounds.right + (int) Math.floor(mTextBounds.width() * 0.4f);
+                textL = mTextBounds.left - (int) Math.floor(mTextBounds.width() * 0.5f);
+                textR = mTextBounds.right + (int) Math.floor(mTextBounds.width() * 0.5f);
                 textT = mTextBounds.top;
                 textB = mTextBounds.bottom;
                 if (!mBarBounds.intersects(textL, textT, textR, textB)) {
