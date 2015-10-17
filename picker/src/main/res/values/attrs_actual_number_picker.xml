@@ -5,6 +5,7 @@
         <attr name="show_bars" format="boolean|reference" />
         <attr name="bars_count" format="integer|reference" />
         <attr name="bar_color" format="color|reference" />
+        <attr name="bar_width" format="dimension|reference" />
 
         <attr name="show_controls" format="boolean|reference" />
         <attr name="controls_color" format="color|reference" />

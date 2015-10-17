@@ -8,6 +8,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.os.Build;
 import android.text.TextPaint;
 import android.util.AttributeSet;
@@ -38,9 +39,11 @@ public class ActualNumberPicker extends View {
     private float mTextSize = -1.0f;
     private boolean mShowText = true;
 
-    private Paint mBarsPaint;
-    private int mBarsCount = DEFAULT_BAR_COUNT;
+    private Paint mBarPaint;
+    private RectF mBarBounds = new RectF(0, 0, 0, 0);
+    private int mBarCount = DEFAULT_BAR_COUNT;
     private int mMinBarWidth;
+    private int mBarWidth = mMinBarWidth;
     private boolean mShowBars = true;
 
     private Paint mControlsPaint;
@@ -81,7 +84,7 @@ public class ActualNumberPicker extends View {
 
     /**
      * Initializes the view from any constructor, utilizing the theme engine, and using the assigned attributes.
-     * 
+     *
      * @param context The Context the view is running in, through which it can access the current theme, resources, etc.
      * @param attrs The attributes of the XML tag that is inflating the view
      * @param defStyleAttr An attribute in the current theme that contains a reference to a style resource that supplies default values for
@@ -97,10 +100,10 @@ public class ActualNumberPicker extends View {
         mShowFastControls = attributes.getBoolean(R.styleable.ActualNumberPicker_show_fast_controls, true);
 
         int barsColor = attributes.getColor(R.styleable.ActualNumberPicker_bar_color, 0xFF404040);
-        mBarsPaint = new Paint();
-        mBarsPaint.setAntiAlias(true);
-        mBarsPaint.setStyle(Paint.Style.FILL);
-        mBarsPaint.setColor(barsColor);
+        mBarPaint = new Paint();
+        mBarPaint.setAntiAlias(true);
+        mBarPaint.setStyle(Paint.Style.FILL);
+        mBarPaint.setColor(barsColor);
 
         int controlsColor = attributes.getColor(R.styleable.ActualNumberPicker_controls_color, 0xFF404040);
         mControlsPaint = new Paint();
@@ -143,11 +146,15 @@ public class ActualNumberPicker extends View {
             throw new RuntimeException("Cannot use value " + mValue + " because it is out of range");
         }
 
-        mBarsCount = attributes.getInteger(R.styleable.ActualNumberPicker_bars_count, DEFAULT_BAR_COUNT);
+        mBarCount = attributes.getInteger(R.styleable.ActualNumberPicker_bars_count, DEFAULT_BAR_COUNT);
+        mMinBarWidth = context.getResources().getDimensionPixelSize(R.dimen.min_bar_width);
+        mBarWidth = attributes.getDimensionPixelSize(R.styleable.ActualNumberPicker_bar_width, mMinBarWidth);
+        if (mBarWidth < mMinBarWidth) {
+            mBarWidth = mMinBarWidth;
+        }
 
         attributes.recycle();
 
-        mMinBarWidth = context.getResources().getDimensionPixelSize(R.dimen.min_bar_width);
         mMinHeight = context.getResources().getDimensionPixelSize(R.dimen.min_height);
     }
 
@@ -279,17 +286,18 @@ public class ActualNumberPicker extends View {
      * @param text Which text to measure
      */
     private void measureText(String text) {
-        // accurate for height
+        // accurate measure for height
         mTextPaint.getTextBounds(text, 0, text.length(), mTextBounds);
         mTextDimens.y = Math.abs(mTextBounds.height());
 
-        // accurate for width
+        // accurate measure for width
         mTextDimens.x = (int) Math.floor(mTextPaint.measureText(text));
+        // update text bounds, will need it for later
+        mTextBounds.set(mTextBounds.left, mTextBounds.top, mTextBounds.left + mTextDimens.x, mTextBounds.bottom);
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        Log.d(TAG, "Touching!" + event);
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN: {
                 return true;
@@ -313,23 +321,80 @@ public class ActualNumberPicker extends View {
         return super.onTouchEvent(event);
     }
 
+    /**
+     * Robert Penner's circular easing function, plotted by time and distance for a motion tween. Can be used for density, width and other
+     * properties that should behave the same.
+     *
+     * @param b The beginning value of the property
+     * @param t The current time (or position) of the tween. This can be seconds or frames, steps, ms, whatever – as long as the unit is the
+     *            same as is used for the total time
+     * @param d The total time of the tween
+     * @param c The change between the beginning and destination value of the property
+     * @return The new value that has resulted from the equation
+     */
+    private float easeInOutCirc(float b, float t, float d, float c) {
+        if ((t /= d / 2) < 1) {
+            return -c / 2 * ((float) Math.sqrt(1 - t * t) - 1) + b;
+        } else {
+            return c / 2 * ((float) Math.sqrt(1 - (t -= 2) * t) + 1) + b;
+        }
+    }
+
+    /**
+     * Calculates how high the bar needs to be for the given index. Higher ones appear near the middle, i.e. when index is near the 1/2 of
+     * the total bar count.
+     *
+     * @param maxHeight Maximum allowed height of a bar
+     * @param totalWidth How wide is the whole view
+     * @param barCount How many bars are there
+     * @param barWidth How wide is the bar
+     * @param index Which bar is being measured
+     * @return Scaled height of the bar
+     */
+    private int calculateBarHeight(int maxHeight, int totalWidth, int barCount, int barWidth, int index) {
+        // Penner's easing function
+        // TODO LOGGING ONLY FOR NOW, NEED TO REEVALUATE
+        float x = easeInOutCirc(0, index / barCount, totalWidth, totalWidth - index / barCount * totalWidth);
+        // int x = (mWidth / mBarCount) * (i + 1) - mBarWidth / 2;
+        Log.d(TAG, String.format("index = %s, barCount = %s, totalWidth = %s, x = %s", index, barCount, totalWidth, x));
+
+        // calculated height will always be much smaller than max height, so go with between values
+        return 2;
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
         if (mShowText) {
             String value = String.valueOf((int) Math.floor(mValue));
-            measureText(value); // this will save dimensions to mTextDimens
+            // this will save dimensions to mTextDimens
+            measureText(value);
             int x = mWidth / 2 - mTextDimens.x / 2;
             int y = mHeight / 2 + mTextDimens.y / 2;
             canvas.drawText(value, x, y, mTextPaint);
+            // update bounds to re-use later
+            mTextBounds.set(x, y, x + mTextBounds.width(), y + mTextBounds.height());
         }
 
         if (mShowBars) {
-            for (int i = 0; i < mBarsCount; i++) {
-                // TODO draw bars, need to thing about this for a while
+            int x, y, barH;
+            int textL, textR, textT, textB;
+            for (int i = 0; i < mBarCount - 1; i++) {
+                x = (mWidth / mBarCount) * (i + 1) - mBarWidth / 2;
+                y = (int) Math.floor(0.3f * mHeight);
+                // smaller ones should be near to the sides
+                barH = calculateBarHeight((int) Math.floor(0.7f * mHeight), mWidth, mBarCount, mBarWidth, i + 1);
+                mBarBounds.set(x, y, x + mBarWidth, barH);
+                // don't draw if it overlaps the text, fake that text is wider
+                textL = mTextBounds.left - (int) Math.floor(mTextBounds.width() * 0.4f);
+                textR = mTextBounds.right + (int) Math.floor(mTextBounds.width() * 0.4f);
+                textT = mTextBounds.top;
+                textB = mTextBounds.bottom;
+                if (!mBarBounds.intersects(textL, textT, textR, textB)) {
+                    canvas.drawRoundRect(mBarBounds, mBarBounds.width() / 3f, mBarBounds.width() / 3f, mBarPaint);
+                }
             }
         }
     }
-
 }
