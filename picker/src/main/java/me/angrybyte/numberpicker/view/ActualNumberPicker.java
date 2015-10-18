@@ -474,8 +474,7 @@ public class ActualNumberPicker extends View {
                 mBarBounds.set(x, y, x + mBarWidth, y + barH);
                 // don't draw if it overlaps the text
                 if (!textOverlapsBars(mTextBounds, mBarBounds)) {
-                    opacity = (int) Math.floor(calculateBarOpacity(0.3f, 1f, mBarCount, i) * 255);
-                    Log.d(TAG, "Opacity is " + opacity);
+                    opacity = (int) Math.floor(calculateBarOpacity(0.5f, 1f, mBarCount, i) * 255);
                     mBarPaint.setAlpha(opacity);
                     canvas.drawRoundRect(mBarBounds, mBarBounds.width() / 3f, mBarBounds.width() / 3f, mBarPaint);
                 }
