@@ -9,27 +9,105 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context=".DemoActivity">
 
-    <NumberPicker
-        android:id="@+id/picker_old"
-        android:layout_width="150dp"
-        android:layout_height="150dp"
-        android:layout_centerHorizontal="true"
-        android:background="#3040DE" />
-
     <me.angrybyte.numberpicker.view.ActualNumberPicker
         android:id="@+id/actual_picker"
         android:layout_width="wrap_content"
         android:layout_height="48dp"
-        android:layout_below="@id/picker_old"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="30dp"
-        android:background="#FF3040"
+        android:layout_marginTop="25dp"
+        android:background="#FFFF3040"
         app:bar_color="@android:color/white"
-        app:bar_width="2dp"
-        app:bars_count="20"
+        app:bar_width="1dp"
+        app:bars_count="26"
         app:max_value="100"
         app:min_value="0"
+        app:show_text="false"
         app:text_color="@android:color/white"
+        app:text_size="16sp" />
+
+    <me.angrybyte.numberpicker.view.ActualNumberPicker
+        android:id="@+id/actual_picker2"
+        android:layout_width="100dp"
+        android:layout_height="48dp"
+        android:layout_below="@id/actual_picker"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="25dp"
+        android:background="#FF30FF40"
+        app:bar_color="@android:color/darker_gray"
+        app:bar_width="1dp"
+        app:bars_count="26"
+        app:max_value="100"
+        app:min_value="0"
+        app:show_text="true"
+        app:text_color="@android:color/darker_gray"
+        app:text_size="16sp" />
+
+    <me.angrybyte.numberpicker.view.ActualNumberPicker
+        android:id="@+id/actual_picker3"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_below="@id/actual_picker2"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="25dp"
+        android:background="#FF7080FF"
+        app:bar_color="@android:color/white"
+        app:bar_width="2dp"
+        app:bars_count="10"
+        app:max_value="100"
+        app:min_value="0"
+        app:show_text="false"
+        app:text_color="@android:color/white"
+        app:text_size="16sp" />
+
+    <me.angrybyte.numberpicker.view.ActualNumberPicker
+        android:id="@+id/actual_picker4"
+        android:layout_width="100dp"
+        android:layout_height="48dp"
+        android:layout_below="@id/actual_picker3"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="25dp"
+        android:background="#FFFF80FF"
+        app:bar_color="@android:color/white"
+        app:bar_width="2dp"
+        app:bars_count="10"
+        app:max_value="100"
+        app:min_value="0"
+        app:show_text="true"
+        app:text_color="@android:color/white"
+        app:text_size="16sp" />
+
+    <me.angrybyte.numberpicker.view.ActualNumberPicker
+        android:id="@+id/actual_picker5"
+        android:layout_width="100dp"
+        android:layout_height="48dp"
+        android:layout_below="@id/actual_picker4"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="25dp"
+        android:background="#FFFFFFFF"
+        app:bar_color="@android:color/darker_gray"
+        app:bar_width="12dp"
+        app:bars_count="4"
+        app:max_value="100"
+        app:min_value="0"
+        app:show_text="false"
+        app:text_color="@android:color/darker_gray"
+        app:text_size="16sp" />
+
+    <me.angrybyte.numberpicker.view.ActualNumberPicker
+        android:id="@+id/actual_picker6"
+        android:layout_width="100dp"
+        android:layout_height="48dp"
+        android:layout_below="@id/actual_picker5"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="25dp"
+        android:background="#FF00FFFF"
+        app:bar_color="@android:color/darker_gray"
+        app:bar_width="12dp"
+        app:bars_count="4"
+        app:max_value="100"
+        app:min_value="0"
+        app:show_text="true"
+        app:text_color="@android:color/darker_gray"
         app:text_size="16sp" />
 
 </RelativeLayout>

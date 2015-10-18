@@ -375,15 +375,13 @@ public class ActualNumberPicker extends View {
      * Calculates how high the bar needs to be for the given index. Higher ones appear near the middle, i.e. when index is near the 1/2 of
      * the total bar count.
      *
+     * @param minHeight Minimum allowed height of a bar
      * @param maxHeight Maximum allowed height of a bar
      * @param barCount How many bars are there
      * @param index Which bar is being measured
-     * @return Scaled height of the bar
+     * @return Correct, scaled height of the given bar (determined by the index parameter)
      */
-    private int calculateBarHeight(int maxHeight, int barCount, int index) {
-        float minHeight = maxHeight * 0.9f;
-
-        // Penner's easing function
+    private int calculateBarHeight(int minHeight, int maxHeight, int barCount, int index) {
         float height;
         if (index < barCount / 2) {
             height = linear(index, minHeight, maxHeight - minHeight, barCount / 2f);
@@ -397,23 +395,55 @@ public class ActualNumberPicker extends View {
     /**
      * Calculates where the given bar should be, more dense bars appear near the edges of the view.
      *
+     * @param barWidth How wide is a single bar
+     * @param totalWidth How wide is the whole container
      * @param barCount How many bars are there
      * @param index Which bar is being measured
-     * @param width How wide is the whole container
-     * @param barWidth How wide is a single bar
      * @return X coordinate of the given bar (determined by the index parameter)
      */
-    private int calculateBarX(int width, int barCount, int index, int barWidth) {
+    private int calculateBarX(int barWidth, int totalWidth, int barCount, int index) {
         // (mWidth / (mBarCount + 1)) * (i + 1) - mBarWidth / 2;
-        float margin = mWidth / mBarCount;
+        float margin = 2;
         float x;
-        if (index < barCount / 2) {
-            x = easeIn(index, margin, width / 2f, barCount / 2f);
+        if (index <= barCount / 2) {
+            x = easeIn(index, margin, totalWidth / 2f, barCount / 2f);
         } else {
-            x = easeOut(index - barCount / 2f, width / 2f, width - margin - width / 2f, barCount / 2f);
+            x = easeOut(index - barCount / 2f, totalWidth / 2f, totalWidth / 2f - margin, barCount / 2f);
         }
 
         return (int) Math.floor(x - barWidth / 2f);
+    }
+
+    /**
+     * @param minOpacity Minimum allowed opacity of a bar
+     * @param maxOpacity Maximum allowed opacity of a bar
+     * @param barCount How many bars are there
+     * @param index Which bar is being measured
+     * @return Correct opacity for the given bar (determined by the index parameter)
+     */
+    private float calculateBarOpacity(float minOpacity, float maxOpacity, int barCount, int index) {
+        if (index < barCount / 2) {
+            return linear(index, minOpacity, maxOpacity - minOpacity, barCount / 2f);
+        } else {
+            return linear(index - barCount / 2f, maxOpacity, minOpacity - maxOpacity, barCount / 2f);
+        }
+    }
+
+    /**
+     * Checks whether the text overlaps the bar that is about to be drawn.<br>
+     * <b>Note</b>: This method fakes the text width, i.e. increases it to allow for some horizontal padding.
+     * 
+     * @param textBounds Which text bounds to measure
+     * @param barBounds Which bar bounds to measure
+     * @return {@code True} if bounds overlap each other, {@code false} if not
+     */
+    private boolean textOverlapsBars(Rect textBounds, RectF barBounds) {
+        // increase original text width to give some padding to the text
+        int textL = textBounds.left - (int) Math.floor(textBounds.width() * 0.6f);
+        int textR = textBounds.right + (int) Math.floor(textBounds.width() * 0.6f);
+        int textT = textBounds.top;
+        int textB = textBounds.bottom;
+        return barBounds.intersects(textL, textT, textR, textB);
     }
 
     @Override
@@ -432,24 +462,25 @@ public class ActualNumberPicker extends View {
         }
 
         if (mShowBars) {
-            int x, y, maxBarH, barH;
-            int textL, textR, textT, textB;
-            for (int i = 0; i < mBarCount; i++) {
+            int x, y, minBarH, maxBarH, barH, opacity;
+            // draw all bars, but draw one more in the end with '<=' instead of '<' (to be symmetric)
+            for (int i = 0; i <= mBarCount; i++) {
                 // smaller ones should be nearer to the sides
                 maxBarH = (int) Math.floor(0.4f * mHeight);
-                barH = calculateBarHeight(maxBarH, mBarCount, i);
-                x = calculateBarX(mWidth, mBarCount, i, mBarWidth);
+                minBarH = (int) Math.floor(maxBarH * 0.9f);
+                barH = calculateBarHeight(minBarH, maxBarH, mBarCount, i);
+                x = calculateBarX(mBarWidth, mWidth, mBarCount, i);
                 y = mHeight / 2 - barH / 2;
                 mBarBounds.set(x, y, x + mBarWidth, y + barH);
-                // don't draw if it overlaps the text, fake that text is wider
-                textL = mTextBounds.left - (int) Math.floor(mTextBounds.width() * 0.6f);
-                textR = mTextBounds.right + (int) Math.floor(mTextBounds.width() * 0.6f);
-                textT = mTextBounds.top;
-                textB = mTextBounds.bottom;
-                if (!mBarBounds.intersects(textL, textT, textR, textB)) {
+                // don't draw if it overlaps the text
+                if (!textOverlapsBars(mTextBounds, mBarBounds)) {
+                    opacity = (int) Math.floor(calculateBarOpacity(0.3f, 1f, mBarCount, i) * 255);
+                    Log.d(TAG, "Opacity is " + opacity);
+                    mBarPaint.setAlpha(opacity);
                     canvas.drawRoundRect(mBarBounds, mBarBounds.width() / 3f, mBarBounds.width() / 3f, mBarPaint);
                 }
             }
         }
     }
+
 }
