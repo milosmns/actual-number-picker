@@ -10,11 +10,14 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.Build;
+import android.support.annotation.IntRange;
 import android.text.TextPaint;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.WindowManager;
 
 import me.angrybyte.numberpicker.BuildConfig;
 import me.angrybyte.numberpicker.R;
@@ -45,6 +48,10 @@ public class ActualNumberPicker extends View {
     private int mMinBarWidth;
     private int mBarWidth = mMinBarWidth;
     private boolean mShowBars = true;
+
+    private float mDensityFactor = 1;
+    private float mLastX = Float.MAX_VALUE;
+    private float mDelta = 0;
 
     private Paint mControlsPaint;
     private boolean mShowControls = true;
@@ -149,9 +156,8 @@ public class ActualNumberPicker extends View {
         mBarCount = attributes.getInteger(R.styleable.ActualNumberPicker_bars_count, DEFAULT_BAR_COUNT);
         if (mBarCount < 3) {
             mBarCount = DEFAULT_BAR_COUNT;
-        } else if (mBarCount % 2 != 0) {
-            mBarCount++;
         }
+
         mMinBarWidth = context.getResources().getDimensionPixelSize(R.dimen.min_bar_width);
         mBarWidth = attributes.getDimensionPixelSize(R.styleable.ActualNumberPicker_bar_width, mMinBarWidth);
         if (mBarWidth < mMinBarWidth) {
@@ -159,6 +165,17 @@ public class ActualNumberPicker extends View {
         }
 
         attributes.recycle();
+
+        WindowManager manager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        int density; // LDPI is 120
+        DisplayMetrics metrics = new DisplayMetrics();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            manager.getDefaultDisplay().getRealMetrics(metrics);
+        } else {
+            manager.getDefaultDisplay().getMetrics(metrics);
+        }
+        density = metrics.densityDpi;
+        mDensityFactor = density / DisplayMetrics.DENSITY_LOW; // will be 1, 1.2, 1.5... etc
 
         mMinHeight = context.getResources().getDimensionPixelSize(R.dimen.min_height);
     }
@@ -200,12 +217,12 @@ public class ActualNumberPicker extends View {
     }
 
     @Override
-    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        Log.d(TAG, "Size changing... " + oldw + "x" + oldh + " -> " + w + "x" + h);
+    protected void onSizeChanged(int w, int h, int oldW, int oldH) {
+        Log.d(TAG, "Size changing... " + oldW + "x" + oldH + " -> " + w + "x" + h);
         mHeight = Math.max(h, mHeight);
         mWidth = calculateWidth(w, MeasureSpec.EXACTLY, mHeight);
         updateTextSize();
-        super.onSizeChanged(mWidth, mHeight, oldw, oldh);
+        super.onSizeChanged(mWidth, mHeight, oldW, oldH);
     }
 
     /**
@@ -305,6 +322,7 @@ public class ActualNumberPicker extends View {
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN: {
+                mLastX = event.getX();
                 return true;
             }
             case MotionEvent.ACTION_MOVE: {
@@ -315,10 +333,17 @@ public class ActualNumberPicker extends View {
                 } else if (mValue > mMaxValue) {
                     mValue = mMaxValue;
                 }
+
+                float thisDelta = mLastX - event.getX();
+                mLastX = event.getX();
+                // 'minus' because we want to go in the opposite direction
+                mDelta -= thisDelta / (mDensityFactor / 2f);
+
                 invalidate();
                 break;
             }
             case MotionEvent.ACTION_UP: {
+                mLastX = Float.MAX_VALUE;
                 return true;
             }
         }
@@ -337,7 +362,7 @@ public class ActualNumberPicker extends View {
      * @param c The change between the beginning and destination value of the property
      * @return The new value that has resulted from the equation
      */
-    public float linear(float t, float b, float c, float d) {
+    private float linear(float t, float b, float c, float d) {
         return c * (t / d) + b;
     }
 
@@ -352,7 +377,7 @@ public class ActualNumberPicker extends View {
      * @param c The change between the beginning and destination value of the property
      * @return The new value that has resulted from the equation
      */
-    public float easeIn(float t, float b, float c, float d) {
+    private float easeIn(float t, float b, float c, float d) {
         return -c * (float) Math.cos(t / d * (Math.PI / 2)) + c + b;
     }
 
@@ -367,72 +392,46 @@ public class ActualNumberPicker extends View {
      * @param c The change between the beginning and destination value of the property
      * @return The new value that has resulted from the equation
      */
-    public float easeOut(float t, float b, float c, float d) {
+    private float easeOut(float t, float b, float c, float d) {
         return c * (float) Math.sin(t / d * (Math.PI / 2)) + b;
     }
 
     /**
-     * Calculates how high the bar needs to be for the given index. Higher ones appear near the middle, i.e. when index is near the 1/2 of
-     * the total bar count.
+     * Penner's sine easing in and out function, plotted by time and distance for a motion tween. Can be used for density, width and other
+     * properties that should behave the same.
      *
-     * @param minHeight Minimum allowed height of a bar
-     * @param maxHeight Maximum allowed height of a bar
-     * @param barCount How many bars are there
-     * @param index Which bar is being measured
-     * @return Correct, scaled height of the given bar (determined by the index parameter)
+     * @param t The current time (or position) of the tween. This can be seconds or frames, steps, ms, whatever – as long as the unit is the
+     *            same as is used for the total time
+     * @param b The beginning value of the property
+     * @param c The change between the beginning and destination value of the property
+     * @param d The total time of the tween
+     * @return The new value that has resulted from the equation
      */
-    private int calculateBarHeight(int minHeight, int maxHeight, int barCount, int index) {
-        float height;
-        if (index < barCount / 2) {
-            height = linear(index, minHeight, maxHeight - minHeight, barCount / 2f);
-        } else {
-            height = linear(index - barCount / 2f, maxHeight, minHeight - maxHeight, barCount / 2f);
-        }
-
-        return (int) Math.floor(height);
+    private double easeInOut(float t, float b, float c, float d) {
+        return -c / 2 * (Math.cos(Math.PI * t / d) - 1) + b;
     }
 
     /**
-     * Calculates where the given bar should be, more dense bars appear near the edges of the view.
+     * Repositions the X coordinate back inside the {@code [0-containerW]} range. If X gets bigger than {@code containerW} then it is
+     * repositioned to the left, symmetrically to the (X:{@code containerW / 2}) line. Analogously, if X gets smaller than {@code 0} then it
+     * is repositioned to the right, symmetrically to the (X:{@code containerW / 2}) line.
      *
-     * @param barWidth How wide is a single bar
-     * @param totalWidth How wide is the whole container
-     * @param barCount How many bars are there
-     * @param index Which bar is being measured
-     * @return X coordinate of the given bar (determined by the index parameter)
+     * @param linearBarX Where is the X coordinate now (prior to reposition)
+     * @param containerW How wide is the container
+     * @return The repositioned X value, which will be inside the {@code [0-containerW]} range
      */
-    private int calculateBarX(int barWidth, int totalWidth, int barCount, int index) {
-        // (mWidth / (mBarCount + 1)) * (i + 1) - mBarWidth / 2;
-        float margin = 2;
-        float x;
-        if (index <= barCount / 2) {
-            x = easeIn(index, margin, totalWidth / 2f, barCount / 2f);
+    public float repositionInside(float linearBarX, int containerW) {
+        if (linearBarX < 0) {
+            return containerW - (-linearBarX % containerW);
         } else {
-            x = easeOut(index - barCount / 2f, totalWidth / 2f, totalWidth / 2f - margin, barCount / 2f);
-        }
-
-        return (int) Math.floor(x - barWidth / 2f);
-    }
-
-    /**
-     * @param minOpacity Minimum allowed opacity of a bar
-     * @param maxOpacity Maximum allowed opacity of a bar
-     * @param barCount How many bars are there
-     * @param index Which bar is being measured
-     * @return Correct opacity for the given bar (determined by the index parameter)
-     */
-    private float calculateBarOpacity(float minOpacity, float maxOpacity, int barCount, int index) {
-        if (index < barCount / 2) {
-            return linear(index, minOpacity, maxOpacity - minOpacity, barCount / 2f);
-        } else {
-            return linear(index - barCount / 2f, maxOpacity, minOpacity - maxOpacity, barCount / 2f);
+            return linearBarX % containerW;
         }
     }
 
     /**
      * Checks whether the text overlaps the bar that is about to be drawn.<br>
      * <b>Note</b>: This method fakes the text width, i.e. increases it to allow for some horizontal padding.
-     * 
+     *
      * @param textBounds Which text bounds to measure
      * @param barBounds Which bar bounds to measure
      * @return {@code True} if bounds overlap each other, {@code false} if not
@@ -444,6 +443,47 @@ public class ActualNumberPicker extends View {
         int textT = textBounds.top;
         int textB = textBounds.bottom;
         return barBounds.intersects(textL, textT, textR, textB);
+    }
+
+    /**
+     * Calculates how high the bar needs to be for the given X coordinate. Higher ones appear near the middle, i.e. when X is near the 1/2
+     * of the container width
+     *
+     * @param minHeight Minimum allowed height of the bar
+     * @param maxHeight Maximum allowed height of the bar
+     * @param barX Where is the bar located on the X-axis
+     * @param containerWidth How wide is the view container
+     * @return Correct, scaled height of the given bar (determined by the index parameter)
+     */
+    private int calculateBarHeight(@IntRange(from = 0) int minHeight, @IntRange(from = 0) int maxHeight, float barX, int containerWidth) {
+        float height;
+        if (barX < containerWidth / 2) {
+            height = linear(barX, minHeight, maxHeight - minHeight, containerWidth / 2f);
+        } else {
+            height = linear(barX - containerWidth / 2f, maxHeight, minHeight - maxHeight, containerWidth / 2f);
+        }
+        return (int) Math.floor(height);
+    }
+
+    /**
+     * Calculates how transparent the bar needs to be for the given X coordinate. More opaque ones appear near the middle, i.e. when X is
+     * near the 1/2 of the container width.
+     *
+     * @param minOpacity Minimum allowed opacity of the bar (must be between 0 and 255)
+     * @param maxOpacity Maximum allowed opacity of the bar (must be between 0 and 255)
+     * @param barX Where is the bar located on the X-axis
+     * @param containerWidth How wide is the view container
+     * @return Correct, scaled height of the given bar (determined by the index parameter)
+     */
+    private int calculateBarOpacity(@IntRange(from = 0, to = 255) int minOpacity, @IntRange(from = 0, to = 255) int maxOpacity, float barX,
+            int containerWidth) {
+        float height;
+        if (barX < containerWidth / 2) {
+            height = linear(barX, minOpacity, maxOpacity - minOpacity, containerWidth / 2f);
+        } else {
+            height = linear(barX - containerWidth / 2f, maxOpacity, minOpacity - maxOpacity, containerWidth / 2f);
+        }
+        return (int) Math.floor(height);
     }
 
     @Override
@@ -462,19 +502,25 @@ public class ActualNumberPicker extends View {
         }
 
         if (mShowBars) {
-            int x, y, minBarH, maxBarH, barH, opacity;
             // draw all bars, but draw one more in the end with '<=' instead of '<' (to be symmetric)
+            int opacity, barH;
+            float linearX, insideX, x, y;
+            int maxBarH = (int) Math.floor(0.4f * mHeight);
+            int minBarH = (int) Math.floor(maxBarH * 0.9f);
+            int minOpacity = 200;
             for (int i = 0; i <= mBarCount; i++) {
-                // smaller ones should be nearer to the sides
-                maxBarH = (int) Math.floor(0.4f * mHeight);
-                minBarH = (int) Math.floor(maxBarH * 0.9f);
-                barH = calculateBarHeight(minBarH, maxBarH, mBarCount, i);
-                x = calculateBarX(mBarWidth, mWidth, mBarCount, i);
+                // calculate X coordinate
+                linearX = mDelta + (float) i / (float) mBarCount * (float) mWidth;
+                insideX = repositionInside(linearX, mWidth);
+                x = (float) Math.floor(easeInOut(insideX, 0f, 1f, mWidth) * mWidth);
+                // calculate bar height
+                barH = calculateBarHeight(minBarH, maxBarH, x, mWidth);
+                // calculate Y coordinate
                 y = mHeight / 2 - barH / 2;
-                mBarBounds.set(x, y, x + mBarWidth, y + barH);
                 // don't draw if it overlaps the text
+                mBarBounds.set(x - mBarWidth / 2f, y, x + mBarWidth, y + barH);
                 if (!textOverlapsBars(mTextBounds, mBarBounds)) {
-                    opacity = (int) Math.floor(calculateBarOpacity(0.5f, 1f, mBarCount, i) * 255);
+                    opacity = calculateBarOpacity(minOpacity, 255, x, mWidth);
                     mBarPaint.setAlpha(opacity);
                     canvas.drawRoundRect(mBarBounds, mBarBounds.width() / 3f, mBarBounds.width() / 3f, mBarPaint);
                 }
