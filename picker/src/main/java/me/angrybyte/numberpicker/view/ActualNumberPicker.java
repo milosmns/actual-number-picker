@@ -457,10 +457,10 @@ public class ActualNumberPicker extends View {
      */
     private int calculateBarHeight(@IntRange(from = 0) int minHeight, @IntRange(from = 0) int maxHeight, float barX, int containerWidth) {
         float height;
-        if (barX < containerWidth / 2) {
-            height = linear(barX, minHeight, maxHeight - minHeight, containerWidth / 2f);
+        if (barX <= containerWidth / 2) {
+            height = easeOut(barX, minHeight, maxHeight - minHeight, containerWidth / 2f);
         } else {
-            height = linear(barX - containerWidth / 2f, maxHeight, minHeight - maxHeight, containerWidth / 2f);
+            height = easeIn(barX - containerWidth / 2f, maxHeight, minHeight - maxHeight, containerWidth / 2f);
         }
         return (int) Math.floor(height);
     }
@@ -478,10 +478,10 @@ public class ActualNumberPicker extends View {
     private int calculateBarOpacity(@IntRange(from = 0, to = 255) int minOpacity, @IntRange(from = 0, to = 255) int maxOpacity, float barX,
             int containerWidth) {
         float height;
-        if (barX < containerWidth / 2) {
-            height = linear(barX, minOpacity, maxOpacity - minOpacity, containerWidth / 2f);
+        if (barX <= containerWidth / 2) {
+            height = easeOut(barX, minOpacity, maxOpacity - minOpacity, containerWidth / 2f);
         } else {
-            height = linear(barX - containerWidth / 2f, maxOpacity, minOpacity - maxOpacity, containerWidth / 2f);
+            height = easeIn(barX - containerWidth / 2f, maxOpacity, minOpacity - maxOpacity, containerWidth / 2f);
         }
         return (int) Math.floor(height);
     }
@@ -505,9 +505,9 @@ public class ActualNumberPicker extends View {
             // draw all bars, but draw one more in the end with '<=' instead of '<' (to be symmetric)
             int opacity, barH;
             float linearX, insideX, x, y;
-            int maxBarH = (int) Math.floor(0.4f * mHeight);
-            int minBarH = (int) Math.floor(maxBarH * 0.9f);
-            int minOpacity = 200;
+            int maxBarH = (int) Math.floor(0.5f * mHeight);
+            int minBarH = (int) Math.floor(maxBarH * 0.95f);
+            int minOpacity = 50;
             for (int i = 0; i <= mBarCount; i++) {
                 // calculate X coordinate
                 linearX = mDelta + (float) i / (float) mBarCount * (float) mWidth;
@@ -519,13 +519,18 @@ public class ActualNumberPicker extends View {
                 y = mHeight / 2 - barH / 2;
                 // don't draw if it overlaps the text
                 mBarBounds.set(x - mBarWidth / 2f, y, x + mBarWidth, y + barH);
-                if (!textOverlapsBars(mTextBounds, mBarBounds)) {
+                if (!mShowText || !textOverlapsBars(mTextBounds, mBarBounds)) {
                     opacity = calculateBarOpacity(minOpacity, 255, x, mWidth);
                     mBarPaint.setAlpha(opacity);
                     canvas.drawRoundRect(mBarBounds, mBarBounds.width() / 3f, mBarBounds.width() / 3f, mBarPaint);
                 }
             }
         }
+
+        if (mShowControls) {
+            // TODO draw controls inside
+        }
+
     }
 
 }
