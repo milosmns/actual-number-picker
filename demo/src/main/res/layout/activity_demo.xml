@@ -41,9 +41,9 @@
             app:bar_width="1dp"
             app:bars_count="26"
             app:controls_color="#FFFFFF40"
-            app:selection_color="#B0FF0000"
             app:max_value="100"
             app:min_value="0"
+            app:selection_color="#B0FF0000"
             app:show_text="true"
             app:text_color="@android:color/darker_gray"
             app:text_size="16sp" />
@@ -112,6 +112,8 @@
             app:bars_count="4"
             app:max_value="100"
             app:min_value="0"
+            app:show_controls="false"
+            app:show_fast_controls="true"
             app:show_text="true"
             app:text_color="@android:color/darker_gray"
             app:text_size="16sp" />

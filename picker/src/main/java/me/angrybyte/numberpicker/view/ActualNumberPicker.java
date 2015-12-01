@@ -5,6 +5,7 @@ import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.PorterDuff;
@@ -12,6 +13,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
+import android.os.Handler;
 import android.support.annotation.IntDef;
 import android.support.annotation.IntRange;
 import android.text.TextPaint;
@@ -48,6 +50,7 @@ public class ActualNumberPicker extends View {
     private static final int FAST_ARR_LEFT = 0xF1;
     private static final int FAST_ARR_RIGHT = 0xF2;
     private static final int CONTROL_TEXT = 0xAA;
+    private static final int ANIMATION_LENGTH = 300;
 
     private Rect mTextBounds = new Rect(0, 0, 0, 0);
     private Point mTextDimens = new Point(0, 0);
@@ -66,12 +69,10 @@ public class ActualNumberPicker extends View {
     private float mLastX = Float.MAX_VALUE;
     private float mDelta = 0;
 
-    // MM replace paint with color
-    private Paint mControlsPaint;
+    private int mControlsColor = Color.DKGRAY;
     private boolean mShowControls = true;
 
-    // MM replace paint with color
-    private Paint mFastControlsPaint;
+    private int mFastControlsColor = Color.DKGRAY;
     private boolean mShowFastControls = true;
 
     private int mMinHeight = 0;
@@ -85,9 +86,14 @@ public class ActualNumberPicker extends View {
     @Control // one of the constants from the top
     private int mSelectedControl = CONTROL_NONE;
     private int mMaxControlSize = mMinHeight;
+    private int mMaxSelectionRadius = mMaxControlSize;
+    private long mSelectionAnimationStart = 0;
     private int mCurControlSize = 0;
     private Paint mSelectionPaint;
+
+    private Handler mHandler;
     private SparseArray<Drawable> mControlIcons = new SparseArray<>(4);
+    private SparseArray<Point> mControlsCX = new SparseArray<>(4); // centerX and centerY for all selection ripples
 
     public ActualNumberPicker(Context context) {
         super(context);
@@ -121,37 +127,29 @@ public class ActualNumberPicker extends View {
      *            0 or can not be found in the theme. Can be 0 to not look for defaults
      */
     private void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+        mHandler = new Handler();
         TypedArray attributes = context.obtainStyledAttributes(attrs, R.styleable.ActualNumberPicker, defStyleAttr, defStyleRes);
 
         mShowBars = attributes.getBoolean(R.styleable.ActualNumberPicker_show_bars, true);
         mShowControls = attributes.getBoolean(R.styleable.ActualNumberPicker_show_controls, true);
         mShowFastControls = attributes.getBoolean(R.styleable.ActualNumberPicker_show_fast_controls, true);
 
-        int barsColor = attributes.getColor(R.styleable.ActualNumberPicker_bar_color, 0xFF404040);
+        int barsColor = attributes.getColor(R.styleable.ActualNumberPicker_bar_color, Color.DKGRAY);
         mBarPaint = new Paint();
         mBarPaint.setAntiAlias(true);
         mBarPaint.setStyle(Paint.Style.FILL);
         mBarPaint.setColor(barsColor);
 
-        int controlsColor = attributes.getColor(R.styleable.ActualNumberPicker_controls_color, 0xFF404040);
-        mControlsPaint = new Paint();
-        mControlsPaint.setAntiAlias(true);
-        mControlsPaint.setStyle(Paint.Style.FILL);
-        mControlsPaint.setColor(controlsColor);
+        int mControlsColor = attributes.getColor(R.styleable.ActualNumberPicker_controls_color, Color.DKGRAY);
+        int mFastControlsColor = attributes.getColor(R.styleable.ActualNumberPicker_fast_controls_color, Color.DKGRAY);
 
-        int fastControlsColor = attributes.getColor(R.styleable.ActualNumberPicker_fast_controls_color, 0xFF404040);
-        mFastControlsPaint = new Paint();
-        mFastControlsPaint.setAntiAlias(true);
-        mFastControlsPaint.setStyle(Paint.Style.FILL);
-        mFastControlsPaint.setColor(fastControlsColor);
-
-        int controlsSelectionColor = attributes.getColor(R.styleable.ActualNumberPicker_selection_color, 0xB0404040);
+        int controlsSelectionColor = attributes.getColor(R.styleable.ActualNumberPicker_selection_color, 0xB0444444);
         mSelectionPaint = new Paint();
         mSelectionPaint.setAntiAlias(true);
         mSelectionPaint.setStyle(Paint.Style.FILL);
         mSelectionPaint.setColor(controlsSelectionColor);
 
-        int textColor = attributes.getColor(R.styleable.ActualNumberPicker_text_color, 0xFF4040FF);
+        int textColor = attributes.getColor(R.styleable.ActualNumberPicker_text_color, Color.DKGRAY);
         mTextPaint = new TextPaint();
         mTextPaint.setAntiAlias(true);
         mTextPaint.setTextAlign(Paint.Align.LEFT);
@@ -201,10 +199,10 @@ public class ActualNumberPicker extends View {
         mControlIcons.put(FAST_ARR_LEFT, context.getResources().getDrawable(R.drawable.ic_keyboard_2arrows_left_black_24dp));
         // noinspection deprecation
         mControlIcons.put(FAST_ARR_RIGHT, context.getResources().getDrawable(R.drawable.ic_keyboard_2arrows_right_black_24dp));
-        mControlIcons.get(ARR_LEFT).setColorFilter(mControlsPaint.getColor(), PorterDuff.Mode.SRC_ATOP);
-        mControlIcons.get(ARR_RIGHT).setColorFilter(mControlsPaint.getColor(), PorterDuff.Mode.SRC_ATOP);
-        mControlIcons.get(FAST_ARR_LEFT).setColorFilter(mFastControlsPaint.getColor(), PorterDuff.Mode.SRC_ATOP);
-        mControlIcons.get(FAST_ARR_RIGHT).setColorFilter(mFastControlsPaint.getColor(), PorterDuff.Mode.SRC_ATOP);
+        mControlIcons.get(ARR_LEFT).setColorFilter(mControlsColor, PorterDuff.Mode.SRC_ATOP);
+        mControlIcons.get(ARR_RIGHT).setColorFilter(mControlsColor, PorterDuff.Mode.SRC_ATOP);
+        mControlIcons.get(FAST_ARR_LEFT).setColorFilter(mFastControlsColor, PorterDuff.Mode.SRC_ATOP);
+        mControlIcons.get(FAST_ARR_RIGHT).setColorFilter(mFastControlsColor, PorterDuff.Mode.SRC_ATOP);
 
         // update density and metrics/dimensions
         WindowManager manager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
@@ -220,6 +218,7 @@ public class ActualNumberPicker extends View {
 
         mMinHeight = context.getResources().getDimensionPixelSize(R.dimen.min_height);
         mMaxControlSize = context.getResources().getDimensionPixelSize(R.dimen.control_size);
+        updateControlPositions();
     }
 
     @Override
@@ -257,6 +256,7 @@ public class ActualNumberPicker extends View {
         // MUST CALL THIS
         setMeasuredDimension(mWidth, mHeight);
         updateTextSize();
+        updateControlPositions();
     }
 
     @Override
@@ -266,7 +266,41 @@ public class ActualNumberPicker extends View {
         mWidth = calculateWidth(w, MeasureSpec.EXACTLY, mHeight);
         mMaxControlSize = Math.min(mHeight, mMaxControlSize);
         updateTextSize();
+        updateControlPositions();
         super.onSizeChanged(mWidth, mHeight, oldW, oldH);
+    }
+
+    private void updateControlPositions() {
+        // load icon dimensions
+        int leftArrW = mControlIcons.get(ARR_LEFT).getMinimumWidth();
+        int leftArrH = mControlIcons.get(ARR_LEFT).getMinimumHeight();
+        int rightArrW = mControlIcons.get(ARR_RIGHT).getMinimumWidth();
+        int rightArrH = mControlIcons.get(ARR_RIGHT).getMinimumHeight();
+
+        mMaxSelectionRadius = mHeight > mMinHeight ? mMaxControlSize : mMinHeight;
+
+        // left arrow selection ripple
+        if (mControlsCX.get(ARR_LEFT) == null) {
+            mControlsCX.put(ARR_LEFT, new Point());
+        }
+        // mControlsCX.get(ARR_LEFT).x = mWidth / 2 - (mShowText ? mTextBounds.width() : mMaxSelectionRadius) / 2 - mMaxSelectionRadius / 2;
+        mControlsCX.get(ARR_LEFT).x = mWidth / 2 - mMaxSelectionRadius / 2 - mMaxSelectionRadius / 2;
+        mControlsCX.get(ARR_LEFT).y = mHeight / 2;
+
+        // left arrow drawable bounds
+        mControlIcons.get(ARR_LEFT).setBounds(mControlsCX.get(ARR_LEFT).x - leftArrW / 2, mControlsCX.get(ARR_LEFT).y - leftArrH / 2,
+                mControlsCX.get(ARR_LEFT).x + leftArrW / 2, mControlsCX.get(ARR_LEFT).y + leftArrH / 2);
+
+        // right arrow selection ripple
+        if (mControlsCX.get(ARR_RIGHT) == null) {
+            mControlsCX.put(ARR_RIGHT, new Point());
+        }
+        mControlsCX.get(ARR_RIGHT).x = mWidth / 2 + mMaxSelectionRadius / 2 + mMaxSelectionRadius / 2;
+        mControlsCX.get(ARR_RIGHT).y = mHeight / 2;
+
+        // right arrow drawable bounds
+        mControlIcons.get(ARR_RIGHT).setBounds(mControlsCX.get(ARR_RIGHT).x - rightArrW / 2, mControlsCX.get(ARR_LEFT).y - rightArrH / 2,
+                mControlsCX.get(ARR_RIGHT).x + rightArrW / 2, mControlsCX.get(ARR_LEFT).y + rightArrH / 2);
     }
 
     /**
@@ -362,11 +396,42 @@ public class ActualNumberPicker extends View {
         mTextBounds.set(mTextBounds.left, mTextBounds.top, mTextBounds.left + mTextDimens.x, mTextBounds.bottom);
     }
 
+    /**
+     * Checks whether the given [x, y] point fits into the hit point rectangle for any of the controls.
+     * 
+     * @param x Where is the finger on the X-axis
+     * @param y Where is the finger on the Y-axis
+     * @return Identifier of the control if the pointer is 'touching' it, or {@link #CONTROL_NONE} if not
+     */
+    @Control
+    private int isTouchingControls(float x, float y) {
+        for (int i = 0; i < mControlsCX.size(); i++) {
+            int key = mControlsCX.keyAt(i);
+            boolean insideX = x > mControlsCX.get(key).x - mMaxSelectionRadius / 2 && x < mControlsCX.get(key).x + mMaxSelectionRadius / 2;
+            boolean insideY = y > mControlsCX.get(key).y - mMaxSelectionRadius / 2 && y < mControlsCX.get(key).y + mMaxSelectionRadius / 2;
+            if (insideX && insideY) {
+                // noinspection ResourceType
+                return key;
+            }
+        }
+        return CONTROL_NONE;
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN: {
+                getParent().requestDisallowInterceptTouchEvent(true);
                 mLastX = event.getX();
+
+                mSelectedControl = isTouchingControls(event.getX(), event.getY());
+                if (mSelectedControl != CONTROL_NONE) {
+                    mSelectionAnimationStart = System.currentTimeMillis();
+                    mCurControlSize = 0;
+
+                    mHandler.removeCallbacks(mAnimationUpdater);
+                    mHandler.post(mAnimationUpdater);
+                }
                 return true;
             }
             case MotionEvent.ACTION_MOVE: {
@@ -386,11 +451,21 @@ public class ActualNumberPicker extends View {
                     mDelta -= thisDelta / (mDensityFactor / 2f);
                 }
 
-                invalidate();
+                mHandler.removeCallbacks(mAnimationUpdater);
+                mHandler.post(mAnimationUpdater);
                 break;
             }
-            case MotionEvent.ACTION_UP: {
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL: {
+                getParent().requestDisallowInterceptTouchEvent(false);
                 mLastX = Float.MAX_VALUE;
+
+                mSelectedControl = CONTROL_NONE;
+                mSelectionAnimationStart = Long.MAX_VALUE;
+                mCurControlSize = 0;
+
+                mHandler.removeCallbacks(mAnimationUpdater);
+                mHandler.post(mAnimationUpdater);
                 return true;
             }
         }
@@ -565,7 +640,7 @@ public class ActualNumberPicker extends View {
             int minBarH = (int) Math.floor(maxBarH * 0.95f);
             int minOpacity = 50;
             for (int i = 0; i <= mBarCount; i++) {
-                // calculate X coordinate
+                // calculate bar X coordinate
                 linearX = mDelta + (float) i / (float) mBarCount * (float) mWidth;
                 insideX = repositionInside(linearX, mWidth);
                 x = (float) Math.floor(easeInOut(insideX, 0f, 1f, mWidth) * mWidth);
@@ -584,30 +659,37 @@ public class ActualNumberPicker extends View {
         }
 
         if (mShowControls) {
-            // load icon dimensions
-            int leftArrW = mControlIcons.get(ARR_LEFT).getMinimumWidth();
-            int leftArrH = mControlIcons.get(ARR_LEFT).getMinimumHeight();
-            int rightArrW = mControlIcons.get(ARR_RIGHT).getMinimumWidth();
-            int rightArrH = mControlIcons.get(ARR_RIGHT).getMinimumHeight();
+            float animationProgress = easeOut(System.currentTimeMillis() - mSelectionAnimationStart, 0f, 1f,
+                    mSelectionAnimationStart + ANIMATION_LENGTH);
+            int alpha = (int) Math.floor((255f - animationProgress * 255f));
 
-            // load touch ripple dimensions
-            int maxSelectionRadius = mHeight > mMinHeight ? mMaxControlSize : mMinHeight;
-            int leftTouchCX = mWidth / 2 - (mShowText ? mTextBounds.width() : maxSelectionRadius) / 2 - maxSelectionRadius / 2;
-            int rightTouchCX = mWidth / 2 + (mShowText ? mTextBounds.width() : maxSelectionRadius) / 2 + maxSelectionRadius / 2;
-            int touchCY = mHeight / 2;
+            if (mSelectedControl == ARR_LEFT) {
+                // left arrow ripple
+                mSelectionPaint.setAlpha(alpha);
+                mCurControlSize = (int) Math.floor(animationProgress * mMaxSelectionRadius / 2f);
+                canvas.drawCircle(mControlsCX.get(ARR_LEFT).x, mControlsCX.get(ARR_LEFT).y, mCurControlSize, mSelectionPaint);
 
-            //if (mSelectedControl == ARR_LEFT) {
-            canvas.drawCircle(leftTouchCX, touchCY, mCurControlSize, mSelectionPaint);
-            //} else if (mSelectedControl == ARR_RIGHT) {
-            canvas.drawCircle(rightTouchCX, touchCY, mCurControlSize, mSelectionPaint);
-            //}
+                if (animationProgress < 1f) {
+                    mHandler.removeCallbacks(mAnimationUpdater);
+                    mHandler.post(mAnimationUpdater);
+                }
+            } else if (mSelectedControl == ARR_RIGHT) {
+                // right arrow ripple
+                mSelectionPaint.setAlpha(alpha);
+                mCurControlSize = (int) Math.floor(animationProgress * mMaxSelectionRadius / 2f);
+                canvas.drawCircle(mControlsCX.get(ARR_RIGHT).x, mControlsCX.get(ARR_RIGHT).y, mCurControlSize, mSelectionPaint);
 
-            mControlIcons.get(ARR_LEFT).setBounds(leftTouchCX - leftArrW / 2, touchCY - leftArrH / 2, leftTouchCX + leftArrW / 2,
-                    touchCY + leftArrH / 2);
+                if (animationProgress < 1f) {
+                    mHandler.removeCallbacks(mAnimationUpdater);
+                    mHandler.post(mAnimationUpdater);
+                }
+            } else {
+                // no normal control selected (still fast controls may be)
+                mSelectionPaint.setAlpha(255);
+                mCurControlSize = 0;
+            }
+
             mControlIcons.get(ARR_LEFT).draw(canvas);
-
-            mControlIcons.get(ARR_RIGHT).setBounds(rightTouchCX - rightArrW / 2, touchCY - rightArrH / 2, rightTouchCX + rightArrW / 2,
-                    touchCY + rightArrH / 2);
             mControlIcons.get(ARR_RIGHT).draw(canvas);
         }
 
