@@ -28,6 +28,7 @@ import android.view.WindowManager;
 import me.angrybyte.numberpicker.BuildConfig;
 import me.angrybyte.numberpicker.R;
 
+import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
