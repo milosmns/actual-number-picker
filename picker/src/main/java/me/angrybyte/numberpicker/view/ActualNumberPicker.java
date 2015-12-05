@@ -28,7 +28,6 @@ import android.view.WindowManager;
 import me.angrybyte.numberpicker.BuildConfig;
 import me.angrybyte.numberpicker.R;
 
-import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
@@ -83,7 +82,8 @@ public class ActualNumberPicker extends View {
     private int mMaxValue = 1000;
     private int mValue = 50;
 
-    @Control // one of the constants from the top
+    @Control
+    // one of the constants from the top
     private int mSelectedControl = CONTROL_NONE;
     private int mMaxControlSize = mMinHeight;
     private int mMaxSelectionRadius = mMaxControlSize;
@@ -398,7 +398,7 @@ public class ActualNumberPicker extends View {
 
     /**
      * Checks whether the given [x, y] point fits into the hit point rectangle for any of the controls.
-     * 
+     *
      * @param x Where is the finger on the X-axis
      * @param y Where is the finger on the Y-axis
      * @return Identifier of the control if the pointer is 'touching' it, or {@link #CONTROL_NONE} if not
@@ -614,6 +614,7 @@ public class ActualNumberPicker extends View {
     private Runnable mAnimationUpdater = new Runnable() {
         @Override
         public void run() {
+            invalidate();
         }
     };
 
@@ -659,14 +660,16 @@ public class ActualNumberPicker extends View {
         }
 
         if (mShowControls) {
-            float animationProgress = easeOut(System.currentTimeMillis() - mSelectionAnimationStart, 0f, 1f,
-                    mSelectionAnimationStart + ANIMATION_LENGTH);
+            float animationProgress = easeOut(System.currentTimeMillis() - mSelectionAnimationStart, 0f, 1f, mSelectionAnimationStart
+                    + ANIMATION_LENGTH);
             int alpha = (int) Math.floor((255f - animationProgress * 255f));
 
             if (mSelectedControl == ARR_LEFT) {
                 // left arrow ripple
                 mSelectionPaint.setAlpha(alpha);
                 mCurControlSize = (int) Math.floor(animationProgress * mMaxSelectionRadius / 2f);
+                Log.d(TAG, String.format("animationProgress = %s, alpha = %s, mCurControlSize = %s", animationProgress, alpha,
+                        mCurControlSize));
                 canvas.drawCircle(mControlsCX.get(ARR_LEFT).x, mControlsCX.get(ARR_LEFT).y, mCurControlSize, mSelectionPaint);
 
                 if (animationProgress < 1f) {
