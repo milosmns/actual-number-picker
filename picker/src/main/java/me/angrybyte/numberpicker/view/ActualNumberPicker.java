@@ -25,12 +25,13 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
 import me.angrybyte.numberpicker.BuildConfig;
 import me.angrybyte.numberpicker.Coloring;
 import me.angrybyte.numberpicker.R;
-
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import me.angrybyte.numberpicker.listener.OnValueChangeListener;
 
 /**
  * A horizontal number picker widget. Every aspect of the view is configurable, for more information see the view's attribute set
@@ -91,6 +92,8 @@ public class ActualNumberPicker extends View {
     private Handler mHandler;
     private SparseArray<Drawable> mControlIcons = new SparseArray<>(4);
     private SparseArray<Drawable> mControlsBacks = new SparseArray<>(4);
+
+    private OnValueChangeListener mListener;
 
     public ActualNumberPicker(Context context) {
         super(context);
@@ -236,6 +239,36 @@ public class ActualNumberPicker extends View {
         mControlIcons.put(FAST_ARR_RIGHT, fastArrRight);
     }
 
+    /**
+     * Sets the {@link OnValueChangeListener} to this number picker.
+     *
+     * @param listener Which listener to set
+     */
+    public void setListener(OnValueChangeListener listener) {
+        mListener = listener;
+    }
+
+    /**
+     * @return Maximum number allowed on this picker
+     */
+    public int getMaxValue() {
+        return mMaxValue;
+    }
+
+    /**
+     * @return Current number value on this picker
+     */
+    public int getValue() {
+        return mValue;
+    }
+
+    /**
+     * @return Minimum number allowed on this picker
+     */
+    public int getMinValue() {
+        return mMinValue;
+    }
+
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
@@ -336,29 +369,57 @@ public class ActualNumberPicker extends View {
         int leftArrH = mControlIcons.get(ARR_LEFT).getMinimumHeight();
         int rightArrW = mControlIcons.get(ARR_RIGHT).getMinimumWidth();
         int rightArrH = mControlIcons.get(ARR_RIGHT).getMinimumHeight();
+        int fastLeftArrW = mControlIcons.get(FAST_ARR_LEFT).getMinimumWidth();
+        int fastLeftArrH = mControlIcons.get(FAST_ARR_LEFT).getMinimumHeight();
+        int fastRightArrW = mControlIcons.get(FAST_ARR_RIGHT).getMinimumWidth();
+        int fastRightArrH = mControlIcons.get(FAST_ARR_RIGHT).getMinimumHeight();
 
         int maxSelectionRadius = mHeight > mMinHeight ? mMaxControlSize : mMinHeight;
 
         // ***** left arrow selection ripple *****
-        // mControlsCX.get(ARR_LEFT).x = mWidth / 2 - (mShowText ? mTextBounds.width() : maxSelectionRadius) / 2 - maxSelectionRadius / 2;
         int leftCX = mWidth / 2 - maxSelectionRadius;
         int leftCY = mHeight / 2;
         mControlsBacks.get(ARR_LEFT).setBounds(leftCX - maxSelectionRadius / 2, leftCY - maxSelectionRadius / 2,
                 leftCX + maxSelectionRadius / 2, leftCY + maxSelectionRadius / 2);
-
         // left arrow drawable bounds
         mControlIcons.get(ARR_LEFT).setBounds(leftCX - leftArrW / 2, leftCY - leftArrH / 2, leftCX + leftArrW / 2, leftCY + leftArrH / 2);
 
         // ***** right arrow selection ripple *****
         int rightCX = mWidth / 2 + maxSelectionRadius;
         int rightCY = mHeight / 2;
-
         mControlsBacks.get(ARR_RIGHT).setBounds(rightCX - maxSelectionRadius / 2, rightCY - maxSelectionRadius / 2,
                 rightCX + maxSelectionRadius / 2, rightCY + maxSelectionRadius / 2);
-
         // right arrow drawable bounds
         mControlIcons.get(ARR_RIGHT).setBounds(rightCX - rightArrW / 2, rightCY - rightArrH / 2, rightCX + rightArrW / 2,
                 rightCY + rightArrH / 2);
+
+        // ***** left fast arrow selection ripple *****
+        int fastLeftCX;
+        if (mShowControls) {
+            fastLeftCX = mWidth / 2 - maxSelectionRadius * 2;
+        } else {
+            fastLeftCX = leftCX;
+        }
+        int fastLeftCY = mHeight / 2;
+        mControlsBacks.get(FAST_ARR_LEFT).setBounds(fastLeftCX - maxSelectionRadius / 2, fastLeftCY - maxSelectionRadius / 2,
+                fastLeftCX + maxSelectionRadius / 2, fastLeftCY + maxSelectionRadius / 2);
+        // left fast arrow drawable bounds
+        mControlIcons.get(FAST_ARR_LEFT).setBounds(fastLeftCX - fastLeftArrW / 2, fastLeftCY - fastLeftArrH / 2,
+                fastLeftCX + fastLeftArrW / 2, fastLeftCY + fastLeftArrH / 2);
+
+        // ***** right fast arrow selection ripple *****
+        int fastRightCX;
+        if (mShowControls) {
+            fastRightCX = mWidth / 2 + maxSelectionRadius * 2;
+        } else {
+            fastRightCX = rightCX;
+        }
+        int fastRightCY = mHeight / 2;
+        mControlsBacks.get(FAST_ARR_RIGHT).setBounds(fastRightCX - maxSelectionRadius / 2, fastRightCY - maxSelectionRadius / 2,
+                fastRightCX + maxSelectionRadius / 2, fastRightCY + maxSelectionRadius / 2);
+        // right fast arrow drawable bounds
+        mControlIcons.get(FAST_ARR_RIGHT).setBounds(fastRightCX - fastRightArrW / 2, fastRightCY - fastRightArrH / 2,
+                fastRightCX + fastRightArrW / 2, fastRightCY + fastRightArrH / 2);
     }
 
     /**
@@ -455,12 +516,73 @@ public class ActualNumberPicker extends View {
     }
 
     /**
+     * Restores the {@code mValue} into the [{@code mMinValue}, {@code mMaxValue}] range if necessary.
+     */
+    private void normalizeValue() {
+        if (mValue < mMinValue) {
+            mValue = mMinValue;
+        } else if (mValue > mMaxValue) {
+            mValue = mMaxValue;
+        }
+    }
+
+    /**
      * Invoked by the view when some of the controls are clicked (touched with ACTION_DOWN and ACTION_UP).
      *
      * @param which The control constant, any of the {@link Control}s
      */
     private void onControlClicked(@Control int which) {
-        // MM fill in
+        int oldValue = mValue;
+        int changeX = 0;
+
+        switch (which) {
+            case ARR_LEFT: {
+                mValue--;
+                changeX = -mBarWidth;
+                break;
+            }
+            case ARR_RIGHT: {
+                mValue++;
+                changeX = +mBarWidth;
+                break;
+            }
+            case FAST_ARR_LEFT: {
+                int valueChange = (mMaxValue - mMinValue) / 10;
+                mValue -= valueChange;
+                changeX = (int) -(0.1f * mWidth);
+                break;
+            }
+            case FAST_ARR_RIGHT: {
+                int valueChange = (mMaxValue - mMinValue) / 10;
+                mValue += valueChange;
+                changeX = (int) (0.1f * mWidth);
+                break;
+            }
+        }
+
+        normalizeValue();
+        if (oldValue != mValue) {
+            float x = mLastX + changeX;
+            float thisDelta = mLastX - x;
+            mLastX = x;
+            // 'minus' because we want to go in the opposite direction
+            mDelta -= thisDelta / (mDensityFactor / 2f);
+            notifyListener(oldValue, mValue);
+        }
+    }
+
+    /**
+     * Calls {@link OnValueChangeListener#onValueChanged(int, int)}, but posts it to the main looper.
+     */
+    private void notifyListener(final int oldValue, final int newValue) {
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (mListener != null) {
+                    mListener.onValueChanged(oldValue, newValue);
+                }
+            }
+        });
     }
 
     /**
@@ -472,13 +594,22 @@ public class ActualNumberPicker extends View {
      */
     @Control
     private int isTouchingControls(float x, float y) {
-        for (int i = 0; i < mControlsBacks.size(); i++) {
-            int key = mControlsBacks.keyAt(i);
-            if (mControlsBacks.get(key).getBounds().contains((int) x, (int) y)) {
-                // noinspection ResourceType
-                return key;
+        if (mShowControls) {
+            if (mControlsBacks.get(ARR_LEFT).getBounds().contains((int) x, (int) y)) {
+                return ARR_LEFT;
+            } else if (mControlsBacks.get(ARR_RIGHT).getBounds().contains((int) x, (int) y)) {
+                return ARR_RIGHT;
             }
         }
+
+        if (mShowFastControls) {
+            if (mControlsBacks.get(FAST_ARR_LEFT).getBounds().contains((int) x, (int) y)) {
+                return FAST_ARR_LEFT;
+            } else if (mControlsBacks.get(FAST_ARR_RIGHT).getBounds().contains((int) x, (int) y)) {
+                return FAST_ARR_RIGHT;
+            }
+        }
+
         return CONTROL_NONE;
     }
 
@@ -510,20 +641,19 @@ public class ActualNumberPicker extends View {
                     }
                 }
 
-                float percent = event.getX() / (float) mWidth;
-                int oldValue = mValue;
-                mValue = (int) Math.floor(percent * mMaxValue + mMinValue);
-                if (mValue < mMinValue) {
-                    mValue = mMinValue;
-                } else if (mValue > mMaxValue) {
-                    mValue = mMaxValue;
-                }
+                if (mSelectedControl == CONTROL_NONE) {
+                    float percent = event.getX() / (float) mWidth;
+                    int oldValue = mValue;
+                    mValue = (int) Math.floor(percent * mMaxValue + mMinValue);
+                    normalizeValue();
 
-                if (mValue != oldValue) {
-                    float thisDelta = mLastX - event.getX();
-                    mLastX = event.getX();
-                    // 'minus' because we want to go in the opposite direction
-                    mDelta -= thisDelta / (mDensityFactor / 2f);
+                    if (mValue != oldValue) {
+                        float thisDelta = mLastX - event.getX();
+                        mLastX = event.getX();
+                        // 'minus' because we want to go in the opposite direction
+                        mDelta -= thisDelta / (mDensityFactor / 2f);
+                        notifyListener(oldValue, mValue);
+                    }
                 }
 
                 mHandler.removeCallbacks(mInvalidator);
@@ -538,6 +668,9 @@ public class ActualNumberPicker extends View {
                 Drawable current = mControlsBacks.get(selectedControl);
                 if (current != null) { // happens only when [mSelectedControl != CONTROL_NONE] but couldn't find out why
                     current.setState(STATE_NORMAL);
+                }
+                if (mSelectedControl != CONTROL_NONE) {
+                    onControlClicked(mSelectedControl);
                 }
                 mSelectedControl = CONTROL_NONE;
 
@@ -669,24 +802,47 @@ public class ActualNumberPicker extends View {
      * @return {@code True} if bar bounds overlap any of the icon bounds, {@code false} if not
      */
     private boolean controlsOverlapBar(SparseArray<Drawable> controlIcons, RectF barBounds) {
-        if (!mShowControls) {
-            return false; // no controls, no overlapping
+        Rect icon;
+        double scaleFactor = 0.2d;
+
+        if (mShowControls) {
+            icon = controlIcons.get(ARR_LEFT).getBounds();
+            if (iconBoundsIntersectBar(barBounds, icon, scaleFactor)) {
+                return true;
+            }
+
+            icon = controlIcons.get(ARR_RIGHT).getBounds();
+            if (iconBoundsIntersectBar(barBounds, icon, scaleFactor)) {
+                return true;
+            }
         }
 
-        for (int i = 0; i < controlIcons.size(); i++) {
-            int key = controlIcons.keyAt(i);
-            Rect icon = controlIcons.get(key).getBounds();
-            double scaleFactor = 0.15d;
-            int iconL = icon.left + scale(icon.width(), scaleFactor);
-            int iconT = icon.top + scale(icon.height(), scaleFactor);
-            int iconR = icon.right - scale(icon.width(), scaleFactor);
-            int iconB = icon.bottom - scale(icon.height(), scaleFactor);
-            if (barBounds.intersects(iconL, iconT, iconR, iconB)) {
+        if (mShowFastControls) {
+            icon = controlIcons.get(FAST_ARR_LEFT).getBounds();
+            if (iconBoundsIntersectBar(barBounds, icon, scaleFactor)) {
+                return true;
+            }
+
+            icon = controlIcons.get(FAST_ARR_RIGHT).getBounds();
+            if (iconBoundsIntersectBar(barBounds, icon, scaleFactor)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * Helper method for calculating intersections for control icons and bars.
+     *
+     * @see #controlsOverlapBar(SparseArray, RectF)
+     */
+    private boolean iconBoundsIntersectBar(RectF barBounds, Rect icon, double scaleFactor) {
+        int iconL = icon.left + scale(icon.width(), scaleFactor);
+        int iconT = icon.top + scale(icon.height(), scaleFactor);
+        int iconR = icon.right - scale(icon.width(), scaleFactor);
+        int iconB = icon.bottom - scale(icon.height(), scaleFactor);
+        return barBounds.intersects(iconL, iconT, iconR, iconB);
     }
 
     /**
@@ -756,14 +912,20 @@ public class ActualNumberPicker extends View {
         }
 
         if (mShowControls) {
-            for (int i = 0; i < mControlsBacks.size(); i++) {
-                mControlsBacks.get(mControlsBacks.keyAt(i)).draw(canvas);
-            }
+            mControlsBacks.get(ARR_LEFT).draw(canvas);
             mControlIcons.get(ARR_LEFT).draw(canvas);
+
+            mControlsBacks.get(ARR_RIGHT).draw(canvas);
             mControlIcons.get(ARR_RIGHT).draw(canvas);
         }
 
-        // TODO: draw fast controls
+        if (mShowFastControls) {
+            mControlsBacks.get(FAST_ARR_LEFT).draw(canvas);
+            mControlIcons.get(FAST_ARR_LEFT).draw(canvas);
+
+            mControlsBacks.get(FAST_ARR_RIGHT).draw(canvas);
+            mControlIcons.get(FAST_ARR_RIGHT).draw(canvas);
+        }
 
         if (mShowBars) {
             // draw all bars, but draw one more in the end with '<=' instead of '<' (to be symmetric)

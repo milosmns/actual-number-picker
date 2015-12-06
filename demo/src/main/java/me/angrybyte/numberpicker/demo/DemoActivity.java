@@ -1,16 +1,28 @@
 
 package me.angrybyte.numberpicker.demo;
 
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
+import android.view.ViewGroup;
 
-public class DemoActivity extends AppCompatActivity {
+import me.angrybyte.numberpicker.listener.OnValueChangeListener;
+import me.angrybyte.numberpicker.view.ActualNumberPicker;
+
+public class DemoActivity extends AppCompatActivity implements OnValueChangeListener {
+
+    private ActualNumberPicker mTestPicker;
+    private ViewGroup mContentRoot;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_demo);
+        mTestPicker = (ActualNumberPicker) findViewById(R.id.actual_picker2);
+        mContentRoot = (ViewGroup) findViewById(android.R.id.content);
+        mTestPicker.setListener(this);
         enableStrictMode();
     }
 
@@ -43,4 +55,23 @@ public class DemoActivity extends AppCompatActivity {
         StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.LAX);
     }
 
+    private void updateBackgroundColor(float percent) {
+        int[] colors = new int[] {
+                Color.WHITE, Color.GRAY, Color.DKGRAY
+        };
+        int color = colors[((int) Math.floor(percent * (colors.length - 1)))];
+
+        mContentRoot.setBackgroundColor(color);
+        mContentRoot.getChildAt(0).setBackgroundColor(color);
+    }
+
+    @Override
+    public void onValueChanged(int oldValue, int newValue) {
+        if (BuildConfig.DEBUG) {
+            Log.d(getClass().getSimpleName(), "Old value: " + oldValue + ", new value: " + newValue);
+        }
+
+        float percent = (float) newValue / (float) (mTestPicker.getMaxValue() - mTestPicker.getMinValue());
+        updateBackgroundColor(percent);
+    }
 }
