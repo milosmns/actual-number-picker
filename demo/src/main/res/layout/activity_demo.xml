@@ -109,6 +109,7 @@
             app:bar_color="@android:color/darker_gray"
             app:bar_width="12dp"
             app:bars_count="4"
+            app:highlight_color="#FF30AA30"
             app:controls_color="#FF4050FF"
             app:draw_over_controls="true"
             app:fast_controls_color="#FF40FF60"
