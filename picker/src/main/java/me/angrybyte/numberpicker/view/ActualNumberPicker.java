@@ -25,12 +25,12 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-
 import me.angrybyte.numberpicker.BuildConfig;
 import me.angrybyte.numberpicker.Coloring;
 import me.angrybyte.numberpicker.R;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
  * A horizontal number picker widget. Every aspect of the view is configurable, for more information see the view's attribute set
@@ -208,7 +208,7 @@ public class ActualNumberPicker extends View {
 
     /**
      * Loads all resource icons (arrows) to the sparse array.
-     * 
+     *
      * @param attributes Which typed array to use to get the colors from
      * @param context Which context to use for resources
      */
@@ -455,6 +455,15 @@ public class ActualNumberPicker extends View {
     }
 
     /**
+     * Invoked by the view when some of the controls are clicked (touched with ACTION_DOWN and ACTION_UP).
+     *
+     * @param which The control constant, any of the {@link Control}s
+     */
+    private void onControlClicked(@Control int which) {
+        // MM fill in
+    }
+
+    /**
      * Checks whether the given [x, y] point fits into the hit point rectangle for any of the controls.
      *
      * @param x Where is the finger on the X-axis
@@ -619,6 +628,17 @@ public class ActualNumberPicker extends View {
     }
 
     /**
+     * Scales the number by the given factor.
+     *
+     * @param what Number to scale up or down
+     * @param factor Scaling factor (must be a positive integer)
+     * @return The scaled value, <b>{@code what}</b> x <b>{@code factor}</b>
+     */
+    private int scale(int what, @IntRange(from = 0) double factor) {
+        return (int) (Math.floor((double) what * factor));
+    }
+
+    /**
      * Checks whether the text overlaps the bar that is about to be drawn.<br>
      * <b>Note</b>: This method fakes the text width, i.e. increases it to allow for some horizontal padding.
      *
@@ -632,15 +652,17 @@ public class ActualNumberPicker extends View {
         }
 
         // increase original text width to give some padding to the text
-        int textL = textBounds.left - (int) Math.floor(textBounds.width() * 0.6f);
-        int textR = textBounds.right + (int) Math.floor(textBounds.width() * 0.6f);
+        double factor = 0.6d;
+        int textL = textBounds.left - scale(textBounds.width(), factor);
         int textT = textBounds.top;
+        int textR = textBounds.right + scale(textBounds.width(), factor);
         int textB = textBounds.bottom;
         return barBounds.intersects(textL, textT, textR, textB);
     }
 
     /**
      * Checks whether the controls overlap the bar that is about to be drawn (icons only are measured).<br>
+     * <b>Note</b>: This method fakes the icon size, i.e. reduces the bounds to make more bars show up.
      *
      * @param controlIcons Which set of {@link Drawable}s to check
      * @param barBounds Which bar bounds to check
@@ -654,7 +676,12 @@ public class ActualNumberPicker extends View {
         for (int i = 0; i < controlIcons.size(); i++) {
             int key = controlIcons.keyAt(i);
             Rect icon = controlIcons.get(key).getBounds();
-            if (barBounds.intersects(icon.left, icon.top, icon.right, icon.bottom)) {
+            double scaleFactor = 0.15d;
+            int iconL = icon.left + scale(icon.width(), scaleFactor);
+            int iconT = icon.top + scale(icon.height(), scaleFactor);
+            int iconR = icon.right - scale(icon.width(), scaleFactor);
+            int iconB = icon.bottom - scale(icon.height(), scaleFactor);
+            if (barBounds.intersects(iconL, iconT, iconR, iconB)) {
                 return true;
             }
         }
@@ -729,8 +756,8 @@ public class ActualNumberPicker extends View {
         }
 
         if (mShowControls) {
-            if (mSelectedControl != CONTROL_NONE) {
-                mControlsBacks.get(mSelectedControl).draw(canvas);
+            for (int i = 0; i < mControlsBacks.size(); i++) {
+                mControlsBacks.get(mControlsBacks.keyAt(i)).draw(canvas);
             }
             mControlIcons.get(ARR_LEFT).draw(canvas);
             mControlIcons.get(ARR_RIGHT).draw(canvas);
