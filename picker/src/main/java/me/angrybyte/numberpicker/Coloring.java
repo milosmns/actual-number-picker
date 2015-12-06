@@ -1,8 +1,6 @@
 
 package me.angrybyte.numberpicker;
 
-import static android.graphics.PorterDuff.Mode.SRC_ATOP;
-
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
@@ -23,9 +21,12 @@ import android.graphics.drawable.GradientDrawable.Orientation;
 import android.graphics.drawable.RippleDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.os.Build;
+import android.support.annotation.Nullable;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.support.v4.graphics.drawable.DrawableWrapper;
 import android.util.Log;
+
+import static android.graphics.PorterDuff.Mode.SRC_ATOP;
 
 /**
  * Factory is used for creating colored elements for the whole app. <br>
@@ -253,7 +254,7 @@ public class Coloring {
      * @param color Which color to use
      * @return A colored drawable ready for use
      */
-    public Drawable colorDrawable(Context context, Drawable drawable, int color) {
+    public Drawable colorDrawable(Context context, @Nullable Drawable drawable, int color) {
         if (!(drawable instanceof BitmapDrawable)) {
             Log.w(LOG_TAG, "Original drawable is not a bitmap! Trying with constant state cloning.");
             return colorUnknownDrawable(drawable, color);
@@ -313,7 +314,7 @@ public class Coloring {
      * @return A colored drawable ready for use
      */
     @SuppressWarnings("RedundantCast")
-    public Drawable colorUnknownDrawable(Drawable drawable, int color) {
+    public Drawable colorUnknownDrawable(@Nullable Drawable drawable, int color) {
         if (drawable instanceof DrawableWrapper || drawable instanceof android.support.v7.graphics.drawable.DrawableWrapper) {
             drawable = DrawableCompat.wrap(drawable);
             DrawableCompat.setTint(drawable, color);
@@ -322,12 +323,15 @@ public class Coloring {
             return drawable;
         } else {
             try {
+                // noinspection ConstantConditions
                 Drawable copy = drawable.getConstantState().newDrawable();
                 copy.mutate();
                 copy.setColorFilter(color, SRC_ATOP);
                 return copy;
             } catch (Exception e) {
-                Log.d(LOG_TAG, "Failed to color unknown drawable: " + drawable.getClass().getSimpleName());
+                if (drawable != null) {
+                    Log.d(LOG_TAG, "Failed to color unknown drawable: " + drawable.getClass().getSimpleName());
+                }
                 return drawable;
             }
         }
@@ -375,21 +379,21 @@ public class Coloring {
     public Drawable createStateDrawable(int normal, int clicked, int checked, boolean shouldFade) {
         // init state arrays
         int[] selectedState = new int[] {
-            android.R.attr.state_selected
+                android.R.attr.state_selected
         };
         int[] pressedState = new int[] {
-            android.R.attr.state_pressed
+                android.R.attr.state_pressed
         };
         int[] checkedState = new int[] {
-            android.R.attr.state_checked
+                android.R.attr.state_checked
         };
         int[] focusedState = new int[] {
-            android.R.attr.state_focused
+                android.R.attr.state_focused
         };
         int[] activatedState = new int[] {};
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
             activatedState = new int[] {
-                android.R.attr.state_activated
+                    android.R.attr.state_activated
             };
         }
 
@@ -525,18 +529,18 @@ public class Coloring {
         // init state arrays
         int[] normalState = new int[] {};
         int[] selectedState = new int[] {
-            android.R.attr.state_selected
+                android.R.attr.state_selected
         };
         int[] pressedState = new int[] {
-            android.R.attr.state_pressed
+                android.R.attr.state_pressed
         };
         int[] checkedState = new int[] {
-            android.R.attr.state_checked
+                android.R.attr.state_checked
         };
         int[] activatedState = new int[] {};
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
             activatedState = new int[] {
-                android.R.attr.state_activated
+                    android.R.attr.state_activated
             };
         }
 
@@ -592,18 +596,18 @@ public class Coloring {
 
         // init state arrays
         int[] selectedState = new int[] {
-            android.R.attr.state_selected
+                android.R.attr.state_selected
         };
         int[] pressedState = new int[] {
-            android.R.attr.state_pressed
+                android.R.attr.state_pressed
         };
         int[] checkedState = new int[] {
-            android.R.attr.state_checked
+                android.R.attr.state_checked
         };
         int[] activatedState = new int[] {};
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
             activatedState = new int[] {
-                android.R.attr.state_activated
+                    android.R.attr.state_activated
             };
         }
 

@@ -8,7 +8,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
-import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
@@ -16,6 +15,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.support.annotation.IntDef;
 import android.support.annotation.IntRange;
+import android.support.annotation.NonNull;
 import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
@@ -25,11 +25,12 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 
-import me.angrybyte.numberpicker.BuildConfig;
-import me.angrybyte.numberpicker.R;
-
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+
+import me.angrybyte.numberpicker.BuildConfig;
+import me.angrybyte.numberpicker.Coloring;
+import me.angrybyte.numberpicker.R;
 
 /**
  * A horizontal number picker widget. Every aspect of the view is configurable, for more information see the view's attribute set
@@ -50,7 +51,7 @@ public class ActualNumberPicker extends View {
     private static final int FAST_ARR_LEFT = 0xF1;
     private static final int FAST_ARR_RIGHT = 0xF2;
     private static final int CONTROL_TEXT = 0xAA;
-    private static final int ANIMATION_LENGTH = 300;
+    private static final int[] STATE_NORMAL = new int[] {};
 
     private Rect mTextBounds = new Rect(0, 0, 0, 0);
     private Point mTextDimens = new Point(0, 0);
@@ -69,10 +70,8 @@ public class ActualNumberPicker extends View {
     private float mLastX = Float.MAX_VALUE;
     private float mDelta = 0;
 
-    private int mControlsColor = Color.DKGRAY;
     private boolean mShowControls = true;
 
-    private int mFastControlsColor = Color.DKGRAY;
     private boolean mShowFastControls = true;
 
     private int mMinHeight = 0;
@@ -87,14 +86,11 @@ public class ActualNumberPicker extends View {
     // one of the constants from the top
     private int mSelectedControl = CONTROL_NONE;
     private int mMaxControlSize = mMinHeight;
-    private int mMaxSelectionRadius = mMaxControlSize;
-    private long mSelectionAnimationStart = 0;
-    private int mCurControlSize = 0;
-    private Paint mSelectionPaint;
+    private int mSelectionColor = Color.GRAY;
 
     private Handler mHandler;
     private SparseArray<Drawable> mControlIcons = new SparseArray<>(4);
-    private SparseArray<Point> mControlsCX = new SparseArray<>(4); // centerX and centerY for all selection ripples
+    private SparseArray<Drawable> mControlsBacks = new SparseArray<>(4);
 
     public ActualNumberPicker(Context context) {
         super(context);
@@ -129,6 +125,7 @@ public class ActualNumberPicker extends View {
      */
     private void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         mHandler = new Handler();
+        setClickable(true);
         TypedArray attributes = context.obtainStyledAttributes(attrs, R.styleable.ActualNumberPicker, defStyleAttr, defStyleRes);
 
         mShowBars = attributes.getBoolean(R.styleable.ActualNumberPicker_show_bars, true);
@@ -141,14 +138,7 @@ public class ActualNumberPicker extends View {
         mBarPaint.setStyle(Paint.Style.FILL);
         mBarPaint.setColor(barsColor);
 
-        int mControlsColor = attributes.getColor(R.styleable.ActualNumberPicker_controls_color, Color.DKGRAY);
-        int mFastControlsColor = attributes.getColor(R.styleable.ActualNumberPicker_fast_controls_color, Color.DKGRAY);
-
-        int controlsSelectionColor = attributes.getColor(R.styleable.ActualNumberPicker_selection_color, 0xB0444444);
-        mSelectionPaint = new Paint();
-        mSelectionPaint.setAntiAlias(true);
-        mSelectionPaint.setStyle(Paint.Style.FILL);
-        mSelectionPaint.setColor(controlsSelectionColor);
+        mSelectionColor = attributes.getColor(R.styleable.ActualNumberPicker_selection_color, 0xB0444444);
 
         int textColor = attributes.getColor(R.styleable.ActualNumberPicker_text_color, Color.DKGRAY);
         mTextPaint = new TextPaint();
@@ -190,20 +180,9 @@ public class ActualNumberPicker extends View {
             mBarWidth = mMinBarWidth;
         }
 
-        attributes.recycle();
+        loadControlIcons(attributes, context);
 
-        // noinspection deprecation
-        mControlIcons.put(ARR_LEFT, context.getResources().getDrawable(R.drawable.ic_keyboard_arrow_left_black_24dp));
-        // noinspection deprecation
-        mControlIcons.put(ARR_RIGHT, context.getResources().getDrawable(R.drawable.ic_keyboard_arrow_right_black_24dp));
-        // noinspection deprecation
-        mControlIcons.put(FAST_ARR_LEFT, context.getResources().getDrawable(R.drawable.ic_keyboard_2arrows_left_black_24dp));
-        // noinspection deprecation
-        mControlIcons.put(FAST_ARR_RIGHT, context.getResources().getDrawable(R.drawable.ic_keyboard_2arrows_right_black_24dp));
-        mControlIcons.get(ARR_LEFT).setColorFilter(mControlsColor, PorterDuff.Mode.SRC_ATOP);
-        mControlIcons.get(ARR_RIGHT).setColorFilter(mControlsColor, PorterDuff.Mode.SRC_ATOP);
-        mControlIcons.get(FAST_ARR_LEFT).setColorFilter(mFastControlsColor, PorterDuff.Mode.SRC_ATOP);
-        mControlIcons.get(FAST_ARR_RIGHT).setColorFilter(mFastControlsColor, PorterDuff.Mode.SRC_ATOP);
+        attributes.recycle();
 
         // update density and metrics/dimensions
         WindowManager manager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
@@ -217,9 +196,44 @@ public class ActualNumberPicker extends View {
         density = metrics.densityDpi;
         mDensityFactor = density / DisplayMetrics.DENSITY_LOW; // will be 1, 1.2, 1.5... etc
 
+        mControlsBacks.put(ARR_LEFT, createControlBackground());
+        mControlsBacks.put(ARR_RIGHT, createControlBackground());
+        mControlsBacks.put(FAST_ARR_LEFT, createControlBackground());
+        mControlsBacks.put(FAST_ARR_RIGHT, createControlBackground());
+
         mMinHeight = context.getResources().getDimensionPixelSize(R.dimen.min_height);
         mMaxControlSize = context.getResources().getDimensionPixelSize(R.dimen.control_size);
-        updateControlPositions();
+        calculateControlPositions();
+    }
+
+    /**
+     * Loads all resource icons (arrows) to the sparse array.
+     * 
+     * @param attributes Which typed array to use to get the colors from
+     * @param context Which context to use for resources
+     */
+    private void loadControlIcons(@NonNull TypedArray attributes, @NonNull Context context) {
+        int controlsColor = attributes.getColor(R.styleable.ActualNumberPicker_controls_color, Color.DKGRAY);
+        // noinspection deprecation
+        Drawable arrLeft = context.getResources().getDrawable(R.drawable.ic_keyboard_arrow_left_black_24dp);
+        arrLeft = Coloring.get().colorDrawable(context, arrLeft, controlsColor);
+        mControlIcons.put(ARR_LEFT, arrLeft);
+
+        // noinspection deprecation
+        Drawable arrRight = context.getResources().getDrawable(R.drawable.ic_keyboard_arrow_right_black_24dp);
+        arrRight = Coloring.get().colorDrawable(context, arrRight, controlsColor);
+        mControlIcons.put(ARR_RIGHT, arrRight);
+
+        int fastControlsColor = attributes.getColor(R.styleable.ActualNumberPicker_fast_controls_color, Color.DKGRAY);
+        // noinspection deprecation
+        Drawable fastArrLeft = context.getResources().getDrawable(R.drawable.ic_keyboard_2arrows_left_black_24dp);
+        fastArrLeft = Coloring.get().colorDrawable(context, fastArrLeft, fastControlsColor);
+        mControlIcons.put(FAST_ARR_LEFT, fastArrLeft);
+
+        // noinspection deprecation
+        Drawable fastArrRight = context.getResources().getDrawable(R.drawable.ic_keyboard_2arrows_right_black_24dp);
+        fastArrRight = Coloring.get().colorDrawable(context, fastArrRight, fastControlsColor);
+        mControlIcons.put(FAST_ARR_RIGHT, fastArrRight);
     }
 
     @Override
@@ -230,7 +244,6 @@ public class ActualNumberPicker extends View {
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
         int widthMode = MeasureSpec.getMode(widthMeasureSpec);
         int widthSize = MeasureSpec.getSize(widthMeasureSpec);
-
         int height;
 
         if (heightMode == MeasureSpec.EXACTLY) {
@@ -257,51 +270,95 @@ public class ActualNumberPicker extends View {
         // MUST CALL THIS
         setMeasuredDimension(mWidth, mHeight);
         updateTextSize();
-        updateControlPositions();
+        calculateControlPositions();
     }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldW, int oldH) {
-        Log.d(TAG, "Size changing... " + oldW + "x" + oldH + " -> " + w + "x" + h);
         mHeight = Math.max(h, mHeight);
         mWidth = calculateWidth(w, MeasureSpec.EXACTLY, mHeight);
         mMaxControlSize = Math.min(mHeight, mMaxControlSize);
         updateTextSize();
-        updateControlPositions();
+        calculateControlPositions();
         super.onSizeChanged(mWidth, mHeight, oldW, oldH);
     }
 
-    private void updateControlPositions() {
+    private Drawable createControlBackground() {
+        Drawable back = Coloring.get().createBackgroundDrawable(Color.TRANSPARENT, mSelectionColor, mSelectionColor, true);
+        back.setCallback(this);
+        return back;
+    }
+
+    @Override
+    protected boolean verifyDrawable(Drawable who) {
+        boolean isControlBackground = false;
+        for (int i = 0; i < mControlsBacks.size(); i++) {
+            if (mControlsBacks.get(mControlsBacks.keyAt(i)) == who) {
+                isControlBackground = true;
+                break;
+            }
+        }
+        return super.verifyDrawable(who) || isControlBackground;
+    }
+
+    @Override
+    public void jumpDrawablesToCurrentState() {
+        super.jumpDrawablesToCurrentState();
+        for (int i = 0; i < mControlsBacks.size(); i++) {
+            mControlsBacks.get(mControlsBacks.keyAt(i)).jumpToCurrentState();
+        }
+    }
+
+    @Override
+    public void drawableHotspotChanged(float x, float y) {
+        super.drawableHotspotChanged(x, y);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            for (int i = 0; i < mControlsBacks.size(); i++) {
+                mControlsBacks.get(mControlsBacks.keyAt(i)).setHotspot(x, y);
+            }
+        }
+    }
+
+    @Override
+    protected void drawableStateChanged() {
+        super.drawableStateChanged();
+        if (mSelectedControl != CONTROL_NONE) {
+            mControlsBacks.get(mSelectedControl).setState(getDrawableState());
+
+            mHandler.removeCallbacks(mInvalidator);
+            mHandler.post(mInvalidator);
+        }
+    }
+
+    private void calculateControlPositions() {
         // load icon dimensions
         int leftArrW = mControlIcons.get(ARR_LEFT).getMinimumWidth();
         int leftArrH = mControlIcons.get(ARR_LEFT).getMinimumHeight();
         int rightArrW = mControlIcons.get(ARR_RIGHT).getMinimumWidth();
         int rightArrH = mControlIcons.get(ARR_RIGHT).getMinimumHeight();
 
-        mMaxSelectionRadius = mHeight > mMinHeight ? mMaxControlSize : mMinHeight;
+        int maxSelectionRadius = mHeight > mMinHeight ? mMaxControlSize : mMinHeight;
 
-        // left arrow selection ripple
-        if (mControlsCX.get(ARR_LEFT) == null) {
-            mControlsCX.put(ARR_LEFT, new Point());
-        }
-        // mControlsCX.get(ARR_LEFT).x = mWidth / 2 - (mShowText ? mTextBounds.width() : mMaxSelectionRadius) / 2 - mMaxSelectionRadius / 2;
-        mControlsCX.get(ARR_LEFT).x = mWidth / 2 - mMaxSelectionRadius / 2 - mMaxSelectionRadius / 2;
-        mControlsCX.get(ARR_LEFT).y = mHeight / 2;
+        // ***** left arrow selection ripple *****
+        // mControlsCX.get(ARR_LEFT).x = mWidth / 2 - (mShowText ? mTextBounds.width() : maxSelectionRadius) / 2 - maxSelectionRadius / 2;
+        int leftCX = mWidth / 2 - maxSelectionRadius;
+        int leftCY = mHeight / 2;
+        mControlsBacks.get(ARR_LEFT).setBounds(leftCX - maxSelectionRadius / 2, leftCY - maxSelectionRadius / 2,
+                leftCX + maxSelectionRadius / 2, leftCY + maxSelectionRadius / 2);
 
         // left arrow drawable bounds
-        mControlIcons.get(ARR_LEFT).setBounds(mControlsCX.get(ARR_LEFT).x - leftArrW / 2, mControlsCX.get(ARR_LEFT).y - leftArrH / 2,
-                mControlsCX.get(ARR_LEFT).x + leftArrW / 2, mControlsCX.get(ARR_LEFT).y + leftArrH / 2);
+        mControlIcons.get(ARR_LEFT).setBounds(leftCX - leftArrW / 2, leftCY - leftArrH / 2, leftCX + leftArrW / 2, leftCY + leftArrH / 2);
 
-        // right arrow selection ripple
-        if (mControlsCX.get(ARR_RIGHT) == null) {
-            mControlsCX.put(ARR_RIGHT, new Point());
-        }
-        mControlsCX.get(ARR_RIGHT).x = mWidth / 2 + mMaxSelectionRadius / 2 + mMaxSelectionRadius / 2;
-        mControlsCX.get(ARR_RIGHT).y = mHeight / 2;
+        // ***** right arrow selection ripple *****
+        int rightCX = mWidth / 2 + maxSelectionRadius;
+        int rightCY = mHeight / 2;
+
+        mControlsBacks.get(ARR_RIGHT).setBounds(rightCX - maxSelectionRadius / 2, rightCY - maxSelectionRadius / 2,
+                rightCX + maxSelectionRadius / 2, rightCY + maxSelectionRadius / 2);
 
         // right arrow drawable bounds
-        mControlIcons.get(ARR_RIGHT).setBounds(mControlsCX.get(ARR_RIGHT).x - rightArrW / 2, mControlsCX.get(ARR_LEFT).y - rightArrH / 2,
-                mControlsCX.get(ARR_RIGHT).x + rightArrW / 2, mControlsCX.get(ARR_LEFT).y + rightArrH / 2);
+        mControlIcons.get(ARR_RIGHT).setBounds(rightCX - rightArrW / 2, rightCY - rightArrH / 2, rightCX + rightArrW / 2,
+                rightCY + rightArrH / 2);
     }
 
     /**
@@ -406,11 +463,9 @@ public class ActualNumberPicker extends View {
      */
     @Control
     private int isTouchingControls(float x, float y) {
-        for (int i = 0; i < mControlsCX.size(); i++) {
-            int key = mControlsCX.keyAt(i);
-            boolean insideX = x > mControlsCX.get(key).x - mMaxSelectionRadius / 2 && x < mControlsCX.get(key).x + mMaxSelectionRadius / 2;
-            boolean insideY = y > mControlsCX.get(key).y - mMaxSelectionRadius / 2 && y < mControlsCX.get(key).y + mMaxSelectionRadius / 2;
-            if (insideX && insideY) {
+        for (int i = 0; i < mControlsBacks.size(); i++) {
+            int key = mControlsBacks.keyAt(i);
+            if (mControlsBacks.get(key).getBounds().contains((int) x, (int) y)) {
                 // noinspection ResourceType
                 return key;
             }
@@ -420,22 +475,32 @@ public class ActualNumberPicker extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        int selectedControl = isTouchingControls(event.getX(), event.getY());
+
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN: {
                 getParent().requestDisallowInterceptTouchEvent(true);
                 mLastX = event.getX();
 
-                mSelectedControl = isTouchingControls(event.getX(), event.getY());
+                mSelectedControl = selectedControl;
                 if (mSelectedControl != CONTROL_NONE) {
-                    mSelectionAnimationStart = System.currentTimeMillis();
-                    mCurControlSize = 0;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        mControlsBacks.get(selectedControl).setHotspot(event.getX(), event.getY());
+                    }
 
-                    mHandler.removeCallbacks(mAnimationUpdater);
-                    mHandler.post(mAnimationUpdater);
+                    mHandler.post(mInvalidator);
                 }
+                setPressed(true); // required to draw drawable transitions properly
                 return true;
             }
             case MotionEvent.ACTION_MOVE: {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    Drawable current = mControlsBacks.get(selectedControl);
+                    if (current != null) { // happens only when [mSelectedControl != CONTROL_NONE] but couldn't find out why
+                        current.setHotspot(event.getX(), event.getY());
+                    }
+                }
+
                 float percent = event.getX() / (float) mWidth;
                 int oldValue = mValue;
                 mValue = (int) Math.floor(percent * mMaxValue + mMinValue);
@@ -452,21 +517,23 @@ public class ActualNumberPicker extends View {
                     mDelta -= thisDelta / (mDensityFactor / 2f);
                 }
 
-                mHandler.removeCallbacks(mAnimationUpdater);
-                mHandler.post(mAnimationUpdater);
-                break;
+                mHandler.removeCallbacks(mInvalidator);
+                mHandler.post(mInvalidator);
+                return true;
             }
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL: {
                 getParent().requestDisallowInterceptTouchEvent(false);
-                mLastX = Float.MAX_VALUE;
+                setPressed(false);
 
+                Drawable current = mControlsBacks.get(selectedControl);
+                if (current != null) { // happens only when [mSelectedControl != CONTROL_NONE] but couldn't find out why
+                    current.setState(STATE_NORMAL);
+                }
                 mSelectedControl = CONTROL_NONE;
-                mSelectionAnimationStart = Long.MAX_VALUE;
-                mCurControlSize = 0;
 
-                mHandler.removeCallbacks(mAnimationUpdater);
-                mHandler.post(mAnimationUpdater);
+                mLastX = Float.MAX_VALUE;
+                mHandler.post(mInvalidator);
                 return true;
             }
         }
@@ -555,17 +622,44 @@ public class ActualNumberPicker extends View {
      * Checks whether the text overlaps the bar that is about to be drawn.<br>
      * <b>Note</b>: This method fakes the text width, i.e. increases it to allow for some horizontal padding.
      *
-     * @param textBounds Which text bounds to measure
-     * @param barBounds Which bar bounds to measure
+     * @param textBounds Which text bounds to check
+     * @param barBounds Which bar bounds to check
      * @return {@code True} if bounds overlap each other, {@code false} if not
      */
-    private boolean textOverlapsBars(Rect textBounds, RectF barBounds) {
+    private boolean textOverlapsBar(Rect textBounds, RectF barBounds) {
+        if (!mShowText) {
+            return false; // no text, no overlapping
+        }
+
         // increase original text width to give some padding to the text
         int textL = textBounds.left - (int) Math.floor(textBounds.width() * 0.6f);
         int textR = textBounds.right + (int) Math.floor(textBounds.width() * 0.6f);
         int textT = textBounds.top;
         int textB = textBounds.bottom;
         return barBounds.intersects(textL, textT, textR, textB);
+    }
+
+    /**
+     * Checks whether the controls overlap the bar that is about to be drawn (icons only are measured).<br>
+     *
+     * @param controlIcons Which set of {@link Drawable}s to check
+     * @param barBounds Which bar bounds to check
+     * @return {@code True} if bar bounds overlap any of the icon bounds, {@code false} if not
+     */
+    private boolean controlsOverlapBar(SparseArray<Drawable> controlIcons, RectF barBounds) {
+        if (!mShowControls) {
+            return false; // no controls, no overlapping
+        }
+
+        for (int i = 0; i < controlIcons.size(); i++) {
+            int key = controlIcons.keyAt(i);
+            Rect icon = controlIcons.get(key).getBounds();
+            if (barBounds.intersects(icon.left, icon.top, icon.right, icon.bottom)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -612,7 +706,7 @@ public class ActualNumberPicker extends View {
     /**
      * A periodic updater for animations. This should be kept clean, as it forces a call to the {@link #onDraw(Canvas)} method.
      */
-    private Runnable mAnimationUpdater = new Runnable() {
+    private Runnable mInvalidator = new Runnable() {
         @Override
         public void run() {
             invalidate();
@@ -634,6 +728,16 @@ public class ActualNumberPicker extends View {
             mTextBounds.set(x, y, x + mTextBounds.width(), y + mTextBounds.height());
         }
 
+        if (mShowControls) {
+            if (mSelectedControl != CONTROL_NONE) {
+                mControlsBacks.get(mSelectedControl).draw(canvas);
+            }
+            mControlIcons.get(ARR_LEFT).draw(canvas);
+            mControlIcons.get(ARR_RIGHT).draw(canvas);
+        }
+
+        // TODO: draw fast controls
+
         if (mShowBars) {
             // draw all bars, but draw one more in the end with '<=' instead of '<' (to be symmetric)
             int opacity, barH;
@@ -652,52 +756,13 @@ public class ActualNumberPicker extends View {
                 y = mHeight / 2 - barH / 2;
                 // don't draw if it overlaps the text
                 mBarBounds.set(x - mBarWidth / 2f, y, x + mBarWidth, y + barH);
-                if (!mShowText || !textOverlapsBars(mTextBounds, mBarBounds)) {
+                if (!textOverlapsBar(mTextBounds, mBarBounds) && !controlsOverlapBar(mControlIcons, mBarBounds)) {
                     opacity = calculateBarOpacity(minOpacity, 255, x, mWidth);
                     mBarPaint.setAlpha(opacity);
                     canvas.drawRoundRect(mBarBounds, mBarBounds.width() / 3f, mBarBounds.width() / 3f, mBarPaint);
                 }
             }
         }
-
-        if (mShowControls) {
-            float animationProgress = easeOut(System.currentTimeMillis() - mSelectionAnimationStart, 0f, 1f, mSelectionAnimationStart
-                    + ANIMATION_LENGTH);
-            int alpha = (int) Math.floor((255f - animationProgress * 255f));
-
-            if (mSelectedControl == ARR_LEFT) {
-                // left arrow ripple
-                mSelectionPaint.setAlpha(alpha);
-                mCurControlSize = (int) Math.floor(animationProgress * mMaxSelectionRadius / 2f);
-                Log.d(TAG, String.format("animationProgress = %s, alpha = %s, mCurControlSize = %s", animationProgress, alpha,
-                        mCurControlSize));
-                canvas.drawCircle(mControlsCX.get(ARR_LEFT).x, mControlsCX.get(ARR_LEFT).y, mCurControlSize, mSelectionPaint);
-
-                if (animationProgress < 1f) {
-                    mHandler.removeCallbacks(mAnimationUpdater);
-                    mHandler.post(mAnimationUpdater);
-                }
-            } else if (mSelectedControl == ARR_RIGHT) {
-                // right arrow ripple
-                mSelectionPaint.setAlpha(alpha);
-                mCurControlSize = (int) Math.floor(animationProgress * mMaxSelectionRadius / 2f);
-                canvas.drawCircle(mControlsCX.get(ARR_RIGHT).x, mControlsCX.get(ARR_RIGHT).y, mCurControlSize, mSelectionPaint);
-
-                if (animationProgress < 1f) {
-                    mHandler.removeCallbacks(mAnimationUpdater);
-                    mHandler.post(mAnimationUpdater);
-                }
-            } else {
-                // no normal control selected (still fast controls may be)
-                mSelectionPaint.setAlpha(255);
-                mCurControlSize = 0;
-            }
-
-            mControlIcons.get(ARR_LEFT).draw(canvas);
-            mControlIcons.get(ARR_RIGHT).draw(canvas);
-        }
-
-        // TODO: draw fast controls
 
     }
 
