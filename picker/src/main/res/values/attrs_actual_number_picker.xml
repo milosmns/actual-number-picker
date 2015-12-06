@@ -7,6 +7,11 @@
         <attr name="bar_color" format="color|reference" />
         <attr name="bar_width" format="dimension|reference" />
         <attr name="selection_color" format="color|reference" />
+        <attr name="draw_over_text" format="boolean|reference" />
+        <attr name="draw_over_controls" format="boolean|reference" />
+
+        <attr name="show_highlight" format="boolean|reference" />
+        <attr name="highlight_color" format="color|reference" />
 
         <attr name="show_controls" format="boolean|reference" />
         <attr name="controls_color" format="color|reference" />

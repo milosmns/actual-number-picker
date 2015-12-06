@@ -4,6 +4,7 @@ package me.angrybyte.numberpicker.view;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -59,6 +60,8 @@ public class ActualNumberPicker extends View {
     private TextPaint mTextPaint;
     private float mTextSize = -1.0f;
     private boolean mShowText = true;
+    private boolean mDrawOverText = false;
+    private boolean mDrawOverControls = true;
 
     private Paint mBarPaint;
     private RectF mBarBounds = new RectF(0, 0, 0, 0);
@@ -67,12 +70,14 @@ public class ActualNumberPicker extends View {
     private int mBarWidth = mMinBarWidth;
     private boolean mShowBars = true;
 
+    private Paint mHighlightPaint;
+    private boolean mShowHighlight = true;
+
     private float mDensityFactor = 1;
     private float mLastX = Float.MAX_VALUE;
     private float mDelta = 0;
 
     private boolean mShowControls = true;
-
     private boolean mShowFastControls = true;
 
     private int mMinHeight = 0;
@@ -127,6 +132,7 @@ public class ActualNumberPicker extends View {
      *            0 or can not be found in the theme. Can be 0 to not look for defaults
      */
     private void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+        setLayerType(View.LAYER_TYPE_SOFTWARE, null);
         mHandler = new Handler();
         setClickable(true);
         TypedArray attributes = context.obtainStyledAttributes(attrs, R.styleable.ActualNumberPicker, defStyleAttr, defStyleRes);
@@ -135,11 +141,23 @@ public class ActualNumberPicker extends View {
         mShowControls = attributes.getBoolean(R.styleable.ActualNumberPicker_show_controls, true);
         mShowFastControls = attributes.getBoolean(R.styleable.ActualNumberPicker_show_fast_controls, true);
 
+        mDrawOverText = attributes.getBoolean(R.styleable.ActualNumberPicker_draw_over_text, false);
+        mDrawOverControls = attributes.getBoolean(R.styleable.ActualNumberPicker_draw_over_controls, true);
+
         int barsColor = attributes.getColor(R.styleable.ActualNumberPicker_bar_color, Color.DKGRAY);
         mBarPaint = new Paint();
         mBarPaint.setAntiAlias(true);
         mBarPaint.setStyle(Paint.Style.FILL);
         mBarPaint.setColor(barsColor);
+
+        mShowHighlight = attributes.getBoolean(R.styleable.ActualNumberPicker_show_highlight, true);
+        int highlightColor = attributes.getColor(R.styleable.ActualNumberPicker_highlight_color, Color.LTGRAY);
+        mHighlightPaint = new Paint();
+        mHighlightPaint.setAntiAlias(true);
+        mHighlightPaint.setStyle(Paint.Style.FILL);
+        mHighlightPaint.setColor(highlightColor);
+        mHighlightPaint.setMaskFilter(new BlurMaskFilter(10, BlurMaskFilter.Blur.NORMAL));
+        mHighlightPaint.setAlpha(100);
 
         mSelectionColor = attributes.getColor(R.styleable.ActualNumberPicker_selection_color, 0xB0444444);
 
@@ -780,8 +798,9 @@ public class ActualNumberPicker extends View {
      * @return {@code True} if bounds overlap each other, {@code false} if not
      */
     private boolean textOverlapsBar(Rect textBounds, RectF barBounds) {
-        if (!mShowText) {
-            return false; // no text, no overlapping
+        if (!mShowText || mDrawOverText) {
+            // no text, no overlapping; draw over text, no overlapping
+            return false;
         }
 
         // increase original text width to give some padding to the text
@@ -802,6 +821,10 @@ public class ActualNumberPicker extends View {
      * @return {@code True} if bar bounds overlap any of the icon bounds, {@code false} if not
      */
     private boolean controlsOverlapBar(SparseArray<Drawable> controlIcons, RectF barBounds) {
+        if (mDrawOverControls) {
+            return false;
+        }
+
         Rect icon;
         double scaleFactor = 0.2d;
 
@@ -911,22 +934,6 @@ public class ActualNumberPicker extends View {
             mTextBounds.set(x, y, x + mTextBounds.width(), y + mTextBounds.height());
         }
 
-        if (mShowControls) {
-            mControlsBacks.get(ARR_LEFT).draw(canvas);
-            mControlIcons.get(ARR_LEFT).draw(canvas);
-
-            mControlsBacks.get(ARR_RIGHT).draw(canvas);
-            mControlIcons.get(ARR_RIGHT).draw(canvas);
-        }
-
-        if (mShowFastControls) {
-            mControlsBacks.get(FAST_ARR_LEFT).draw(canvas);
-            mControlIcons.get(FAST_ARR_LEFT).draw(canvas);
-
-            mControlsBacks.get(FAST_ARR_RIGHT).draw(canvas);
-            mControlIcons.get(FAST_ARR_RIGHT).draw(canvas);
-        }
-
         if (mShowBars) {
             // draw all bars, but draw one more in the end with '<=' instead of '<' (to be symmetric)
             int opacity, barH;
@@ -951,6 +958,44 @@ public class ActualNumberPicker extends View {
                     canvas.drawRoundRect(mBarBounds, mBarBounds.width() / 3f, mBarBounds.width() / 3f, mBarPaint);
                 }
             }
+        }
+
+        if (mShowControls) {
+            mControlsBacks.get(ARR_LEFT).draw(canvas);
+            mControlsBacks.get(ARR_RIGHT).draw(canvas);
+
+            if (mShowHighlight) {
+                int radius = mControlIcons.get(ARR_LEFT).getBounds().width() / 2;
+                int leftCX = mControlIcons.get(ARR_LEFT).getBounds().centerX();
+                int leftCY = mControlIcons.get(ARR_LEFT).getBounds().centerY();
+                canvas.drawCircle(leftCX, leftCY, radius, mHighlightPaint);
+
+                int rightCX = mControlIcons.get(ARR_RIGHT).getBounds().centerX();
+                int rightCY = mControlIcons.get(ARR_RIGHT).getBounds().centerY();
+                canvas.drawCircle(rightCX, rightCY, radius, mHighlightPaint);
+            }
+
+            mControlIcons.get(ARR_LEFT).draw(canvas);
+            mControlIcons.get(ARR_RIGHT).draw(canvas);
+        }
+
+        if (mShowFastControls) {
+            mControlsBacks.get(FAST_ARR_LEFT).draw(canvas);
+            mControlsBacks.get(FAST_ARR_RIGHT).draw(canvas);
+
+            if (mShowHighlight) {
+                int radius = mControlIcons.get(FAST_ARR_LEFT).getBounds().width() / 2;
+                int leftCX = mControlIcons.get(FAST_ARR_LEFT).getBounds().centerX();
+                int leftCY = mControlIcons.get(FAST_ARR_LEFT).getBounds().centerY();
+                canvas.drawCircle(leftCX, leftCY, radius, mHighlightPaint);
+
+                int rightCX = mControlIcons.get(FAST_ARR_RIGHT).getBounds().centerX();
+                int rightCY = mControlIcons.get(FAST_ARR_RIGHT).getBounds().centerY();
+                canvas.drawCircle(rightCX, rightCY, radius, mHighlightPaint);
+            }
+
+            mControlIcons.get(FAST_ARR_LEFT).draw(canvas);
+            mControlIcons.get(FAST_ARR_RIGHT).draw(canvas);
         }
 
     }

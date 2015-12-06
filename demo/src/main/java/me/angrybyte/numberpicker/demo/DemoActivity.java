@@ -5,7 +5,6 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.ViewGroup;
 
 import me.angrybyte.numberpicker.listener.OnValueChangeListener;
@@ -67,10 +66,6 @@ public class DemoActivity extends AppCompatActivity implements OnValueChangeList
 
     @Override
     public void onValueChanged(int oldValue, int newValue) {
-        if (BuildConfig.DEBUG) {
-            Log.d(getClass().getSimpleName(), "Old value: " + oldValue + ", new value: " + newValue);
-        }
-
         float percent = (float) newValue / (float) (mTestPicker.getMaxValue() - mTestPicker.getMinValue());
         updateBackgroundColor(percent);
     }
