@@ -545,6 +545,23 @@ public class ActualNumberPicker extends View {
     }
 
     /**
+     * Forces a new value onto the view. This will notify the listener and move the wheel to its starting position.<br>
+     * <b>Note</b>: The value must be between {@link #mMinValue} and {@link #mMaxValue}.
+     * 
+     * @param newValue Which value to set
+     */
+    public void setValue(int newValue) {
+        int oldValue = mValue;
+        mDelta = 0;
+        mValue = newValue;
+        mLastX = Float.MAX_VALUE;
+        normalizeValue();
+        if (oldValue != mValue) {
+            notifyListener(oldValue, mValue);
+        }
+    }
+
+    /**
      * Invoked by the view when some of the controls are clicked (touched with ACTION_DOWN and ACTION_UP).
      *
      * @param which The control constant, any of the {@link Control}s
