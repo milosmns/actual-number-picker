@@ -4,6 +4,7 @@ apply plugin: 'com.android.library'
  * To upload to Bintray, run:
  * .\gradlew install
  * .\gradlew bintrayUpload
+ * More information on http://inthecheesefactory.com/blog/how-to-upload-library-to-jcenter-maven-central-as-dependency/en
  */
 
 ext {
