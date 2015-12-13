@@ -48,17 +48,8 @@ android {
     }
 
     lintOptions {
-        checkReleaseBuilds false
+        checkReleaseBuilds = false
     }
-}
-
-task androidJavadocs(type: Javadoc) {
-    failOnError false
-}
-
-task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
-    classifier = 'javadoc'
-    from androidJavadocs.destinationDir
 }
 
 configurations {

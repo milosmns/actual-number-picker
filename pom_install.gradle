@@ -9,7 +9,7 @@ install {
         pom {
             project {
                 packaging 'aar'
-                groupId publishedGroupId
+                groupId group
                 artifactId artifact
 
                 name libraryName
@@ -30,12 +30,11 @@ install {
                         email developerEmail
                     }
                 }
-                
+
                 scm {
                     connection gitUrl
                     developerConnection gitUrl
                     url siteUrl
-
                 }
             }
         }
