@@ -1,6 +1,6 @@
 <resources>
 
-    <string name="app_name">Demo App</string>
+    <string name="app_name">Actual Number Picker: Demo</string>
     <string name="this_picker_will_work">This number picker will control the background.</string>
 
 </resources>

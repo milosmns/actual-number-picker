@@ -69,4 +69,5 @@ public class DemoActivity extends AppCompatActivity implements OnValueChangeList
         float percent = (float) newValue / (float) (mTestPicker.getMaxValue() - mTestPicker.getMinValue());
         updateBackgroundColor(percent);
     }
+
 }
