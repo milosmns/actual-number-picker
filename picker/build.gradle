@@ -1,12 +1,18 @@
 apply plugin: 'com.android.library'
 
+/*
+ * To upload to Bintray, run:
+ * .\gradlew install
+ * .\gradlew bintrayUpload
+ */
+
 ext {
     bintrayRepo = 'maven'
-    bintrayName = 'actual-number-picker'
+    bintrayName = 'picker'
 
-    publishedGroupId = 'me.angrybyte.numpicker'
+    publishedGroupId = 'me.angrybyte.picker'
     libraryName = 'ActualNumberPicker'
-    artifact = 'actual-number-picker'
+    artifact = 'picker'
 
     libraryDescription = 'A simple, elegant, horizontal, wheel-like number picker View for Android.'
 
