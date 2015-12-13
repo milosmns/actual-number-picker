@@ -1,5 +1,29 @@
 apply plugin: 'com.android.library'
 
+ext {
+    bintrayRepo = 'maven'
+    bintrayName = 'actual-number-picker'
+
+    publishedGroupId = 'me.angrybyte.numpicker'
+    libraryName = 'ActualNumberPicker'
+    artifact = 'actual-number-picker'
+
+    libraryDescription = 'A simple, elegant, horizontal, wheel-like number picker View for Android.'
+
+    siteUrl = 'https://github.com/milosmns/actual-number-picker'
+    gitUrl = 'https://github.com/milosmns/actual-number-picker.git'
+
+    libraryVersion = '1.2.0'
+
+    developerId = 'milosmns'
+    developerName = 'Milos Marinkovic'
+    developerEmail = 'milosmns@gmail.com'
+
+    licenseName = 'GNU General Public License, Version 3.0'
+    licenseUrl = 'http://www.gnu.org/licenses/gpl-3.0.en.html'
+    allLicenses = ["GNU-GPL-3.0"]
+}
+
 android {
     compileSdkVersion 22
     buildToolsVersion "22.0.1"
