@@ -66,3 +66,13 @@ dependencies {
 
 apply from: '../pom_install.gradle'
 apply from: '../bintray_upload.gradle'
+
+task androidJavadoc(type: Javadoc) {
+    classpath += configurations.javadocDep
+    failOnError false
+    println('Creating Android javadoc!')
+}
+
+tasks['javadoc'].onlyIf {
+    false
+}
