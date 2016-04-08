@@ -1,5 +1,6 @@
 Actual Number Picker
 ====================
+[![Android Weekly](https://img.shields.io/badge/Android%20Weekly-185-blue.svg)](http://androidweekly.net/issues/issue-185)
 
 What is this?
 -------------
