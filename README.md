@@ -43,59 +43,59 @@ Sample usage
 ------------
 First, define the View in your layout file (of course, you don't need to add all the `app` attributes, I just added them for demo).
 
-    ...
-    <me.angrybyte.numberpicker.view.ActualNumberPicker
-        android:id="@+id/actual_picker"
-        android:layout_width="wrap_content"
-        android:layout_height="48dp"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="25dp"
-        android:background="#FFFF3040"
-        app:bar_color="@android:color/white"
-        app:bar_width="1dp"
-        app:bars_count="26"
-        app:controls_color="@android:color/white"
-        app:draw_over_controls="true"
-        app:draw_over_text="false"
-        app:fast_controls_color="@android:color/darker_gray"
-        app:highlight_color="#FFFF3040"
-        app:max_value="100"
-        app:min_value="0"
-        app:selection_color="#A0FF3040"
-        app:show_bars="true"
-        app:show_controls="true"
-        app:show_fast_controls="true"
-        app:show_highlight="true"
-        app:show_text="false"
-        app:text_color="@android:color/white"
-        app:text_size="16sp"
-        app:value="50" />
-    ...
+```xml
+<me.angrybyte.numberpicker.view.ActualNumberPicker
+    android:id="@+id/actual_picker"
+    android:layout_width="wrap_content"
+    android:layout_height="48dp"
+    android:layout_centerHorizontal="true"
+    android:layout_marginTop="25dp"
+    android:background="#FFFF3040"
+    app:bar_color="@android:color/white"
+    app:bar_width="1dp"
+    app:bars_count="26"
+    app:controls_color="@android:color/white"
+    app:draw_over_controls="true"
+    app:draw_over_text="false"
+    app:fast_controls_color="@android:color/darker_gray"
+    app:highlight_color="#FFFF3040"
+    app:max_value="100"
+    app:min_value="0"
+    app:selection_color="#A0FF3040"
+    app:show_bars="true"
+    app:show_controls="true"
+    app:show_fast_controls="true"
+    app:show_highlight="true"
+    app:show_text="false"
+    app:text_color="@android:color/white"
+    app:text_size="16sp"
+    app:value="50" />
+```
 
 Then, from Java (your Activity or Fragment), you can easily get the view and attach the listener.
+```java
+public class DemoActivity extends AppCompatActivity implements OnValueChangeListener {
 
-    public class DemoActivity extends AppCompatActivity implements OnValueChangeListener {
+    private static final String TAG = DemoActivity.class.getSimpleName();
 
-        private static final String TAG = DemoActivity.class.getSimpleName();
+    private ActualNumberPicker mPicker;
 
-        private ActualNumberPicker mPicker;
-
-        @Override
-        protected void onCreate(Bundle savedInstanceState) {
-            super.onCreate(savedInstanceState);
-            setContentView(R.layout.activity_demo);
-            mPicker = (ActualNumberPicker) findViewById(R.id.actual_picker);
-            mPicker.setListener(this);
-        }
-    
-        @Override
-        public void onValueChanged(int oldValue, int newValue) {
-            float percent = (float) newValue / (float) (mPicker.getMaxValue() - mPicker.getMinValue());
-            Log.d(TAG, "Currently the picker is at " + percent + " percent.");
-        }
-
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_demo);
+        mPicker = (ActualNumberPicker) findViewById(R.id.actual_picker);
+        mPicker.setListener(this);
     }
 
+    @Override
+    public void onValueChanged(int oldValue, int newValue) {
+        float percent = (float) newValue / (float) (mPicker.getMaxValue() - mPicker.getMinValue());
+        Log.d(TAG, "Currently the picker is at " + percent + " percent.");
+    }
+
+}
+```
 **Note**: `onValueChanged()` event will always get fired on the UI thread.
 
 Explanation of attributes
