@@ -679,7 +679,7 @@ public class ActualNumberPicker extends View {
                 if (mSelectedControl == CONTROL_NONE) {
                     float percent = event.getX() / (float) mWidth;
                     int oldValue = mValue;
-                    mValue = (int) Math.floor(percent * mMaxValue + mMinValue);
+                    mValue = (int) Math.floor(percent * (mMaxValue - mMinValue)) + mMinValue;
                     normalizeValue();
 
                     if (mValue != oldValue) {
