@@ -297,7 +297,10 @@ public class ActualNumberPicker extends View {
             throw new RuntimeException("Cannot use min_value " + minValue + " because the max_value is " + mMaxValue);
         }
         this.mMinValue = minValue;
-        mValue = (mMinValue > mValue) ? (mMaxValue + mMinValue) / 2 : mValue;
+
+        if(mMinValue > mValue){
+            setValue((mMaxValue + mMinValue) / 2);
+        }
     }
 
     /**
@@ -310,7 +313,10 @@ public class ActualNumberPicker extends View {
             throw new RuntimeException("Cannot use max_value " + maxValue + " because the min_value is " + mMinValue);
         }
         this.mMaxValue = maxValue;
-        mValue = (mMaxValue < mValue) ? (mMaxValue + mMinValue) / 2 : mValue;
+
+        if(mMaxValue < mValue){
+            setValue((mMaxValue + mMinValue) / 2);
+        }
     }
 
     @Override
