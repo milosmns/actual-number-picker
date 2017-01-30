@@ -287,6 +287,38 @@ public class ActualNumberPicker extends View {
         return mMinValue;
     }
 
+    /**
+     * Sets the minimum value to this number picker.
+     *
+     * @param minValue Minimum value to display by the number picker.
+     */
+    public void setMinValue(int minValue) {
+        if (mMaxValue <= minValue) {
+            throw new RuntimeException("Cannot use min_value " + minValue + " because the max_value is " + mMaxValue);
+        }
+        this.mMinValue = minValue;
+
+        if(mMinValue > mValue){
+            setValue((mMaxValue + mMinValue) / 2);
+        }
+    }
+
+    /**
+     * Sets the maximum value to this number picker.
+     *
+     * @param maxValue Maximum value to display by the number picker.
+     */
+    public void setMaxValue(int maxValue) {
+        if (maxValue <= mMinValue) {
+            throw new RuntimeException("Cannot use max_value " + maxValue + " because the min_value is " + mMinValue);
+        }
+        this.mMaxValue = maxValue;
+
+        if(mMaxValue < mValue){
+            setValue((mMaxValue + mMinValue) / 2);
+        }
+    }
+
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
