@@ -26,5 +26,5 @@ dependencies {
     // compile project(':picker')
 
     // Remote usage
-    compile 'me.angrybyte.picker:picker:1.3.0'
+    compile 'me.angrybyte.picker:picker:1.3.1'
 }
