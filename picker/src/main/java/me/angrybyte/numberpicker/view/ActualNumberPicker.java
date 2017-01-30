@@ -290,7 +290,7 @@ public class ActualNumberPicker extends View {
     /**
      * Sets the minimum value to this number picker.
      *
-     * @param minValue Minimum value to display by the number picker.
+     * @param minValue Minimum value to display by the number picker
      */
     public void setMinValue(int minValue) {
         if (mMaxValue <= minValue) {
@@ -298,7 +298,7 @@ public class ActualNumberPicker extends View {
         }
         this.mMinValue = minValue;
 
-        if(mMinValue > mValue){
+        if (mMinValue > mValue) {
             setValue((mMaxValue + mMinValue) / 2);
         }
     }
@@ -306,7 +306,7 @@ public class ActualNumberPicker extends View {
     /**
      * Sets the maximum value to this number picker.
      *
-     * @param maxValue Maximum value to display by the number picker.
+     * @param maxValue Maximum value to display by the number picker
      */
     public void setMaxValue(int maxValue) {
         if (maxValue <= mMinValue) {
@@ -314,7 +314,7 @@ public class ActualNumberPicker extends View {
         }
         this.mMaxValue = maxValue;
 
-        if(mMaxValue < mValue){
+        if (mMaxValue < mValue) {
             setValue((mMaxValue + mMinValue) / 2);
         }
     }
