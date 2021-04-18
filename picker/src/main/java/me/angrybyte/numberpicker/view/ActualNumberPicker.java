@@ -66,8 +66,8 @@ public class ActualNumberPicker extends View {
     private Paint mBarPaint;
     private RectF mBarBounds = new RectF(0, 0, 0, 0);
     private int mBarCount = DEFAULT_BAR_COUNT;
-    private int mMinBarWidth = 1;
-    private int mBarWidth = mMinBarWidth;
+    private float mMinBarWidth = (float) 0.1;
+    private float mBarWidth = mMinBarWidth;
     private boolean mShowBars = true;
 
     private Paint mHighlightPaint;
@@ -600,7 +600,7 @@ public class ActualNumberPicker extends View {
      */
     private void onControlClicked(@Control int which) {
         int oldValue = mValue;
-        int changeX = 0;
+        float changeX = (float) 0.0;
 
         switch (which) {
             case ARR_LEFT: {
@@ -616,13 +616,13 @@ public class ActualNumberPicker extends View {
             case FAST_ARR_LEFT: {
                 int valueChange = (mMaxValue - mMinValue) / 10;
                 mValue -= valueChange;
-                changeX = (int) -(0.1f * mWidth);
+                changeX = (float) -1.0;
                 break;
             }
             case FAST_ARR_RIGHT: {
                 int valueChange = (mMaxValue - mMinValue) / 10;
                 mValue += valueChange;
-                changeX = (int) (0.1f * mWidth);
+                changeX = (float) +1.0;;
                 break;
             }
         }
