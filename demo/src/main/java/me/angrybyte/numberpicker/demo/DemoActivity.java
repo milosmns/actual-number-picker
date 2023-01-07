@@ -65,7 +65,7 @@ public class DemoActivity extends AppCompatActivity implements OnValueChangeList
     }
 
     @Override
-    public void onValueChanged(float oldValue, float newValue) {
+    public void onValueChanged(double oldValue, double newValue) {
         float percent = (float) newValue / (float) (mTestPicker.getMaxValue() - mTestPicker.getMinValue());
         updateBackgroundColor(percent);
     }

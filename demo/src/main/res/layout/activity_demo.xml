@@ -2,15 +2,18 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#00FFFFFF"
+    android:backgroundTint="#00000000"
+    android:backgroundTintMode="src_over">
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="@dimen/activity_vertical_margin"
         android:paddingLeft="@dimen/activity_horizontal_margin"
-        android:paddingRight="@dimen/activity_horizontal_margin"
         android:paddingTop="@dimen/activity_vertical_margin"
+        android:paddingRight="@dimen/activity_horizontal_margin"
+        android:paddingBottom="@dimen/activity_vertical_margin"
         tools:context=".DemoActivity">
 
         <me.angrybyte.numberpicker.view.ActualNumberPicker
@@ -46,8 +49,8 @@
             android:layout_height="wrap_content"
             android:layout_below="@id/actual_picker"
             android:layout_centerHorizontal="true"
-            android:layout_marginBottom="12dp"
             android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp"
             android:gravity="center"
             android:text="@string/this_picker_will_work" />
 
@@ -116,7 +119,7 @@
             android:layout_centerHorizontal="true"
             android:layout_marginTop="25dp"
             android:background="#FFFFFFFF"
-            app:bar_color="@android:color/darker_gray"
+            app:bar_color="#000000"
             app:bar_width="12dp"
             app:bars_count="4"
             app:controls_color="#FF4050FF"
@@ -167,27 +170,49 @@
             app:text_color="@android:color/white"
             app:text_size="16sp" />
 
+<!--        <me.angrybyte.numberpicker.view.ActualNumberPicker-->
+<!--            android:id="@+id/actual_picker8"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="80dp"-->
+<!--            android:layout_below="@id/actual_picker7"-->
+<!--            android:layout_marginTop="10dp"-->
+<!--            android:background="#FFFFFF"-->
+<!--            app:bar_color="@android:color/white"-->
+<!--            app:bar_width="1dp"-->
+<!--            app:bars_count="50"-->
+<!--            app:controls_color="#FFFF3030"-->
+<!--            app:draw_over_text="true"-->
+<!--            app:max_value="100"-->
+<!--            app:min_value="0"-->
+<!--            app:selection_color="#EEFFFF00"-->
+<!--            app:show_controls="true"-->
+<!--            app:show_fast_controls="false"-->
+<!--            app:show_text="true"-->
+<!--            app:text_color="#FB8C00"-->
+<!--            app:text_size="16sp"-->
+<!--            app:value_adjustment="0.2" />-->
+
         <me.angrybyte.numberpicker.view.ActualNumberPicker
             android:id="@+id/actual_picker8"
-            android:layout_width="wrap_content"
-            android:layout_height="80dp"
+            android:layout_width="269dp"
+            android:layout_height="69dp"
             android:layout_below="@id/actual_picker7"
             android:layout_centerHorizontal="true"
             android:layout_marginTop="25dp"
-            android:background="#FF000000"
-            app:bar_color="@android:color/white"
-            app:bar_width="2dp"
-            app:bars_count="10"
-            app:controls_color="#FFFF3030"
-            app:max_value="100"
+            android:background="#FFFFFFFF"
+            app:bar_color="#252525"
+            app:bar_width="1dp"
+            app:bars_count="95"
+            app:controls_color="#040404"
+            app:draw_over_controls="true"
+            app:show_highlight="false"
+            app:max_value="19"
             app:min_value="0"
-            app:selection_color="#EEFFFF00"
-            app:show_controls="true"
             app:show_fast_controls="false"
             app:show_text="true"
-            app:text_color="@android:color/white"
-            app:value_adjustment="0.2"
-            app:text_size="16sp" />
+            app:text_color="#FB8C00"
+            app:text_size="16sp"
+            app:value_adjustment="0.2" />
 
     </RelativeLayout>
 

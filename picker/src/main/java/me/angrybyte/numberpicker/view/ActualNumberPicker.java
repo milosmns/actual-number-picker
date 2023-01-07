@@ -29,7 +29,9 @@ import android.view.WindowManager;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.math.BigDecimal;
 
+import kotlin.jvm.Throws;
 import me.angrybyte.numberpicker.BuildConfig;
 import me.angrybyte.numberpicker.Coloring;
 import me.angrybyte.numberpicker.R;
@@ -87,8 +89,8 @@ public class ActualNumberPicker extends View {
 
     private int mMinValue = 0;
     private int mMaxValue = 1000;
-    private float mValue = 50;
-    private float mValueAdjustment = 1; // Set to 0.2 if you want the slider to go 40 -> 40.2 -> 40.4, etc.
+    private double mValue = 50;
+    private double mValueAdjustment = 1.0d; // Set to 0.2 if you want the slider to go 40 -> 40.2 -> 40.4, etc.
 
     @Control
     // one of the constants from the top
@@ -184,10 +186,9 @@ public class ActualNumberPicker extends View {
             throw new RuntimeException("Cannot use value " + mValue + " because it is out of range");
         }
 
-        mValueAdjustment = attributes.getFloat(R.styleable.ActualNumberPicker_value_adjustment, mMinValue);
-        if (mValueAdjustment < 0 || mValueAdjustment > 1) {
-            throw new RuntimeException("Cannot use value " + mValueAdjustment + " because it is must be between 0 and 1");
-        }
+        // You can't set an attribute to a double. So we grab the float and round it to the nearest
+        float valueAdjustmentFloat = attributes.getFloat(R.styleable.ActualNumberPicker_value_adjustment, 1f);
+        setValueAdjustment(valueAdjustmentFloat);
 
         mBarCount = attributes.getInteger(R.styleable.ActualNumberPicker_bars_count, DEFAULT_BAR_COUNT);
         if (mBarCount < 3) {
@@ -274,7 +275,7 @@ public class ActualNumberPicker extends View {
     /**
      * @return Current number value on this picker
      */
-    public float getValue() {
+    public double getValue() {
         return mValue;
     }
 
@@ -578,8 +579,8 @@ public class ActualNumberPicker extends View {
      *
      * @param newValue Which value to set
      */
-    public void setValue(float newValue) {
-        float oldValue = mValue;
+    public void setValue(double newValue) {
+        double oldValue = mValue;
         mDelta = 0;
         mValue = newValue;
         mLastX = Float.MAX_VALUE;
@@ -591,9 +592,12 @@ public class ActualNumberPicker extends View {
 
     public void setValueAdjustment(float newValueAdjustment) {
         if (newValueAdjustment < 0 || newValueAdjustment > 1) {
-            throw new RuntimeException("Cannot use value_adjustment " + newValueAdjustment + " because it must be between 0 and 1");
+            throw new RuntimeException("Cannot use value " + mValueAdjustment + " because it is must be between 0 and 1");
         }
-        mValueAdjustment = newValueAdjustment;
+        mValueAdjustment = Math.round(newValueAdjustment * 100.0) / 100.0;
+        if ((1.0 * 100) % (mValueAdjustment * 100) != 0) {
+            throw new RuntimeException("Cannot use value " + mValueAdjustment + " because there must be no remainder when dividing 1 by the value adjustment");
+        }
     }
 
     /**
@@ -602,17 +606,17 @@ public class ActualNumberPicker extends View {
      * @param which The control constant, any of the {@link Control}s
      */
     private void onControlClicked(@Control int which) {
-        float oldValue = mValue;
+        double oldValue = mValue;
         int changeX = 0;
 
         switch (which) {
             case ARR_LEFT: {
-                mValue -= mValueAdjustment;
+                mValue = BigDecimal.valueOf(mValue).subtract(BigDecimal.valueOf(mValueAdjustment)).doubleValue();
                 changeX = -mBarWidth;
                 break;
             }
             case ARR_RIGHT: {
-                mValue += mValueAdjustment;
+                mValue = BigDecimal.valueOf(mValue).add(BigDecimal.valueOf(mValueAdjustment)).doubleValue();
                 changeX = +mBarWidth;
                 break;
             }
@@ -642,9 +646,9 @@ public class ActualNumberPicker extends View {
     }
 
     /**
-     * Calls {@link OnValueChangeListener#onValueChanged(float, float)}, but posts it to the main looper.
+     * Calls {@link OnValueChangeListener#onValueChanged(double, double)}, but posts it to the main looper.
      */
-    private void notifyListener(final float oldValue, final float newValue) {
+    private void notifyListener(final double oldValue, final double newValue) {
         mHandler.post(() -> {
             if (mListener != null) {
                 mListener.onValueChanged(oldValue, newValue);
@@ -706,7 +710,7 @@ public class ActualNumberPicker extends View {
 
                 if (mSelectedControl == CONTROL_NONE) {
                     float percent = event.getX() / (float) mWidth;
-                    float oldValue = mValue;
+                    double oldValue = mValue;
                     mValue = (float) Math.floor(percent * (mMaxValue - mMinValue)) + mMinValue;
                     normalizeValue();
 
@@ -964,12 +968,20 @@ public class ActualNumberPicker extends View {
         super.onDraw(canvas);
 
         if (mShowText) {
-            String value = String.valueOf((int) Math.floor(mValue));
+            // Show the decimal place only if the user wants decimal value adjustments
+            String value = "";
+            if (mValueAdjustment == 1) {
+                value = String.valueOf((int) Math.floor(mValue));
+            } else {
+                value = String.valueOf(mValue);
+            }
+
             // this will save dimensions to mTextDimens
             measureText(value);
             int x = mWidth / 2 - mTextDimens.x / 2;
             int y = mHeight / 2 + mTextDimens.y / 2;
             canvas.drawText(value, x, y, mTextPaint);
+
             // update bounds to re-use later
             mTextBounds.set(x, y, x + mTextBounds.width(), y + mTextBounds.height());
         }
