@@ -21,12 +21,13 @@ import android.graphics.drawable.GradientDrawable.Orientation;
 import android.graphics.drawable.RippleDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.os.Build;
-import android.support.annotation.Nullable;
-import android.support.v4.graphics.drawable.DrawableCompat;
-import android.support.v4.graphics.drawable.DrawableWrapper;
+import androidx.core.graphics.drawable.DrawableCompat;
+import android.graphics.drawable.DrawableWrapper;
 import android.util.Log;
 
 import static android.graphics.PorterDuff.Mode.SRC_ATOP;
+
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Factory is used for creating colored elements for the whole app. <br>
@@ -315,7 +316,7 @@ public class Coloring {
      */
     @SuppressWarnings("RedundantCast")
     public Drawable colorUnknownDrawable(@Nullable Drawable drawable, int color) {
-        if (drawable instanceof DrawableWrapper || drawable instanceof android.support.v7.graphics.drawable.DrawableWrapper) {
+        if (drawable instanceof DrawableWrapper || drawable instanceof androidx.appcompat.graphics.drawable.DrawableWrapper) {
             drawable = DrawableCompat.wrap(drawable);
             DrawableCompat.setTint(drawable, color);
             DrawableCompat.setTintMode(drawable, PorterDuff.Mode.SRC_ATOP);
