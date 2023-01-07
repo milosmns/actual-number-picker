@@ -59,14 +59,14 @@ configurations {
 }
 
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile 'com.android.support:appcompat-v7:25.1.0'
-    compile 'com.android.support:support-annotations:25.1.0'
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.android.support:appcompat-v7:25.1.0'
+    implementation 'com.android.support:support-annotations:25.1.0'
     javadocDep 'com.android.support:appcompat-v7:25.1.0'
     javadocDep 'com.android.support:support-annotations:25.1.0'
 }
 
-apply from: '../pom_install.gradle'
+//apply from: '../pom_install.gradle'
 apply from: '../bintray_upload.gradle'
 
 task androidJavadoc(type: Javadoc) {
