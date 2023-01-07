@@ -128,6 +128,7 @@ Here are some short explanations for the attributes provided by the view. You ca
 - `min_value`: (**integer**) How low can the value numbers go.
 - `max_value`: (**integer**) How high can the value numbers go.
 - `value`: (**integer**) Set the current value (*must be between `min_value` and `max_value`*).
+- `value_adjustment`: (**float**) Set the numerical value of each arrow movement. e.g. if this is `0.2` then the picker values will go 0.0 -> 0.2, etc. (*must be between `0` and `1`*).
 
 Support
 -------

@@ -14,6 +14,7 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Handler;
+import android.support.annotation.FloatRange;
 import android.support.annotation.IntDef;
 import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
@@ -86,7 +87,8 @@ public class ActualNumberPicker extends View {
 
     private int mMinValue = 0;
     private int mMaxValue = 1000;
-    private int mValue = 50;
+    private float mValue = 50;
+    private float mValueAdjustment = 1; // Set to 0.2 if you want the slider to go 40 -> 40.2 -> 40.4, etc.
 
     @Control
     // one of the constants from the top
@@ -185,9 +187,14 @@ public class ActualNumberPicker extends View {
             throw new RuntimeException("Cannot use max_value " + mMaxValue + " because the min_value is " + mMinValue);
         }
 
-        mValue = attributes.getInt(R.styleable.ActualNumberPicker_value, (mMaxValue + mMinValue) / 2);
+        mValue = attributes.getFloat(R.styleable.ActualNumberPicker_value, mMinValue);
         if (mValue < mMinValue || mValue > mMaxValue) {
             throw new RuntimeException("Cannot use value " + mValue + " because it is out of range");
+        }
+
+        mValueAdjustment = attributes.getFloat(R.styleable.ActualNumberPicker_value_adjustment, mMinValue);
+        if (mValueAdjustment < 0 || mValueAdjustment > 1) {
+            throw new RuntimeException("Cannot use value " + mValueAdjustment + " because it is must be between 0 and 1");
         }
 
         mBarCount = attributes.getInteger(R.styleable.ActualNumberPicker_bars_count, DEFAULT_BAR_COUNT);
@@ -276,7 +283,7 @@ public class ActualNumberPicker extends View {
     /**
      * @return Current number value on this picker
      */
-    public int getValue() {
+    public float getValue() {
         return mValue;
     }
 
@@ -579,11 +586,11 @@ public class ActualNumberPicker extends View {
     /**
      * Forces a new value onto the view. This will notify the listener and move the wheel to its starting position.<br>
      * <b>Note</b>: The value must be between {@link #mMinValue} and {@link #mMaxValue}.
-     * 
+     *
      * @param newValue Which value to set
      */
-    public void setValue(int newValue) {
-        int oldValue = mValue;
+    public void setValue(float newValue) {
+        float oldValue = mValue;
         mDelta = 0;
         mValue = newValue;
         mLastX = Float.MAX_VALUE;
@@ -593,23 +600,30 @@ public class ActualNumberPicker extends View {
         }
     }
 
+    public void setValueAdjustment(float newValueAdjustment) {
+        if (newValueAdjustment < 0 || newValueAdjustment > 1) {
+            throw new RuntimeException("Cannot use value_adjustment " + newValueAdjustment + " because it must be between 0 and 1");
+        }
+        mValueAdjustment = newValueAdjustment;
+    }
+
     /**
      * Invoked by the view when some of the controls are clicked (touched with ACTION_DOWN and ACTION_UP).
      *
      * @param which The control constant, any of the {@link Control}s
      */
     private void onControlClicked(@Control int which) {
-        int oldValue = mValue;
+        float oldValue = mValue;
         int changeX = 0;
 
         switch (which) {
             case ARR_LEFT: {
-                mValue--;
+                mValue -= mValueAdjustment;
                 changeX = -mBarWidth;
                 break;
             }
             case ARR_RIGHT: {
-                mValue++;
+                mValue += mValueAdjustment;
                 changeX = +mBarWidth;
                 break;
             }
@@ -639,9 +653,9 @@ public class ActualNumberPicker extends View {
     }
 
     /**
-     * Calls {@link OnValueChangeListener#onValueChanged(int, int)}, but posts it to the main looper.
+     * Calls {@link OnValueChangeListener#onValueChanged(float, float)}, but posts it to the main looper.
      */
-    private void notifyListener(final int oldValue, final int newValue) {
+    private void notifyListener(final float oldValue, final float newValue) {
         mHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -710,8 +724,8 @@ public class ActualNumberPicker extends View {
 
                 if (mSelectedControl == CONTROL_NONE) {
                     float percent = event.getX() / (float) mWidth;
-                    int oldValue = mValue;
-                    mValue = (int) Math.floor(percent * (mMaxValue - mMinValue)) + mMinValue;
+                    float oldValue = mValue;
+                    mValue = (float) Math.floor(percent * (mMaxValue - mMinValue)) + mMinValue;
                     normalizeValue();
 
                     if (mValue != oldValue) {
@@ -834,7 +848,7 @@ public class ActualNumberPicker extends View {
      * @param factor Scaling factor (must be a positive integer)
      * @return The scaled value, <b>{@code what}</b> x <b>{@code factor}</b>
      */
-    private int scale(int what, @IntRange(from = 0) double factor) {
+    private int scale(int what, @FloatRange(from = 0) double factor) {
         return (int) (Math.floor((double) what * factor));
     }
 

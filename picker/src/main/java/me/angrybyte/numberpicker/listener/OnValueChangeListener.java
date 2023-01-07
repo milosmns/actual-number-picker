@@ -15,6 +15,6 @@ public interface OnValueChangeListener {
      * @param oldValue The value picker had before the change
      * @param newValue Tha value picker has now, after the change
      */
-    void onValueChanged(int oldValue, int newValue);
+    void onValueChanged(float oldValue, float newValue);
 
 }

@@ -23,7 +23,8 @@
         <attr name="text_size" format="dimension|reference" />
         <attr name="text_color" format="color|reference" />
 
-        <attr name="value" format="integer|reference" />
+        <attr name="value" format="float|reference" />
+        <attr name="value_adjustment" format="float|reference" />
         <attr name="min_value" format="integer|reference" />
         <attr name="max_value" format="integer|reference" />
 

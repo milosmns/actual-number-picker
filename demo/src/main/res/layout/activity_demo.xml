@@ -186,6 +186,7 @@
             app:show_fast_controls="false"
             app:show_text="true"
             app:text_color="@android:color/white"
+            app:value_adjustment="0.2"
             app:text_size="16sp" />
 
     </RelativeLayout>
