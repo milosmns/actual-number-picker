@@ -19,8 +19,8 @@ public class DemoActivity extends AppCompatActivity implements OnValueChangeList
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_demo);
-        mTestPicker = (ActualNumberPicker) findViewById(R.id.actual_picker2);
-        mContentRoot = (ViewGroup) findViewById(android.R.id.content);
+        mTestPicker = findViewById(R.id.actual_picker2);
+        mContentRoot = findViewById(android.R.id.content);
         mTestPicker.setListener(this);
         enableStrictMode();
     }

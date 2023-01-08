@@ -168,29 +168,8 @@
             app:show_fast_controls="false"
             app:show_text="false"
             app:text_color="@android:color/white"
-            app:text_size="16sp" />
-
-<!--        <me.angrybyte.numberpicker.view.ActualNumberPicker-->
-<!--            android:id="@+id/actual_picker8"-->
-<!--            android:layout_width="wrap_content"-->
-<!--            android:layout_height="80dp"-->
-<!--            android:layout_below="@id/actual_picker7"-->
-<!--            android:layout_marginTop="10dp"-->
-<!--            android:background="#FFFFFF"-->
-<!--            app:bar_color="@android:color/white"-->
-<!--            app:bar_width="1dp"-->
-<!--            app:bars_count="50"-->
-<!--            app:controls_color="#FFFF3030"-->
-<!--            app:draw_over_text="true"-->
-<!--            app:max_value="100"-->
-<!--            app:min_value="0"-->
-<!--            app:selection_color="#EEFFFF00"-->
-<!--            app:show_controls="true"-->
-<!--            app:show_fast_controls="false"-->
-<!--            app:show_text="true"-->
-<!--            app:text_color="#FB8C00"-->
-<!--            app:text_size="16sp"-->
-<!--            app:value_adjustment="0.2" />-->
+            app:text_size="16sp"
+            app:min_bar_height="small" />
 
         <me.angrybyte.numberpicker.view.ActualNumberPicker
             android:id="@+id/actual_picker8"
@@ -201,16 +180,17 @@
             android:layout_marginTop="25dp"
             android:background="#FFFFFFFF"
             app:bar_color="#252525"
-            app:bar_width="1dp"
-            app:bars_count="95"
+            app:bar_width="1.5dp"
+            app:bars_count="50"
             app:controls_color="#040404"
-            app:draw_over_controls="true"
-            app:show_highlight="false"
+            app:draw_over_text="false"
             app:max_value="19"
+            app:min_bar_height="small"
             app:min_value="0"
             app:show_fast_controls="false"
+            app:show_highlight="false"
             app:show_text="true"
-            app:text_color="#FB8C00"
+            app:text_color="#495E68"
             app:text_size="16sp"
             app:value_adjustment="0.2" />
 

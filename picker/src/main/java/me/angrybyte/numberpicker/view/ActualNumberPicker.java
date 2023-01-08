@@ -31,7 +31,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.math.BigDecimal;
 
-import kotlin.jvm.Throws;
 import me.angrybyte.numberpicker.BuildConfig;
 import me.angrybyte.numberpicker.Coloring;
 import me.angrybyte.numberpicker.R;
@@ -70,6 +69,7 @@ public class ActualNumberPicker extends View {
     private final RectF mBarBounds = new RectF(0, 0, 0, 0);
     private int mBarCount = DEFAULT_BAR_COUNT;
     private int mMinBarWidth = 1;
+    private String mMinBarHeight = "large";
     private int mBarWidth = mMinBarWidth;
     private boolean mShowBars = true;
 
@@ -201,6 +201,14 @@ public class ActualNumberPicker extends View {
             mBarWidth = mMinBarWidth;
         }
 
+        mMinBarHeight = "large";
+        if (attributes.hasValue(R.styleable.ActualNumberPicker_min_bar_height)) {
+            mMinBarHeight = attributes.getString(R.styleable.ActualNumberPicker_min_bar_height);
+        }
+        if (!mMinBarHeight.equals("large") && !mMinBarHeight.equals("small")) {
+            throw new RuntimeException("Cannot use value " + mMinBarHeight + ". Only 'small' and 'large' are accepted");
+        }
+
         loadControlIcons(attributes, context);
 
         attributes.recycle();
@@ -209,11 +217,7 @@ public class ActualNumberPicker extends View {
         WindowManager manager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         int density; // LDPI is 120
         DisplayMetrics metrics = new DisplayMetrics();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            manager.getDefaultDisplay().getRealMetrics(metrics);
-        } else {
-            manager.getDefaultDisplay().getMetrics(metrics);
-        }
+        manager.getDefaultDisplay().getRealMetrics(metrics);
         density = metrics.densityDpi;
         mDensityFactor = density / DisplayMetrics.DENSITY_LOW; // will be 1, 1.2, 1.5... etc
 
@@ -969,7 +973,7 @@ public class ActualNumberPicker extends View {
 
         if (mShowText) {
             // Show the decimal place only if the user wants decimal value adjustments
-            String value = "";
+            String value;
             if (mValueAdjustment == 1) {
                 value = String.valueOf((int) Math.floor(mValue));
             } else {
@@ -991,7 +995,8 @@ public class ActualNumberPicker extends View {
             int opacity, barH;
             float linearX, insideX, x, y;
             int maxBarH = (int) Math.floor(0.5f * mHeight);
-            int minBarH = (int) Math.floor(maxBarH * 0.95f);
+            float minBarHeightRatio = (mMinBarHeight.equals("large") ? 0.95f : 0.55f);
+            int minBarH = (int) Math.floor(maxBarH * minBarHeightRatio);
             int minOpacity = 50;
             for (int i = 0; i <= mBarCount; i++) {
                 // calculate bar X coordinate
